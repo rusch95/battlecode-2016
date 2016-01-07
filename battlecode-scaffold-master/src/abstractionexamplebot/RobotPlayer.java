@@ -13,14 +13,6 @@ public class RobotPlayer {
     @SuppressWarnings("unused")
     public static void run(RobotController rc) {
         // You can instantiate variables here.
-        Direction[] directions = {Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, Direction.SOUTH_EAST,
-                Direction.SOUTH, Direction.SOUTH_WEST, Direction.WEST, Direction.NORTH_WEST};
-        RobotType[] robotTypes = {RobotType.SCOUT, RobotType.SOLDIER, RobotType.SOLDIER, RobotType.SOLDIER,
-                RobotType.GUARD, RobotType.GUARD, RobotType.VIPER, RobotType.TURRET};
-        Random rand = new Random(rc.getID());
-        int myAttackRange = 0;
-        Team myTeam = rc.getTeam();
-        Team enemyTeam = myTeam.opponent();
         RobotHandler me = null;
 
         if (rc.getType() == RobotType.ARCHON) {
@@ -37,7 +29,6 @@ public class RobotPlayer {
         } else if (rc.getType() != RobotType.TURRET) {
             try {
                 // Any code here gets executed exactly once at the beginning of the game.
-                myAttackRange = rc.getType().attackRadiusSquared;
                 me = new NonTurret(rc);
             } catch (Exception e) {
                 // Throwing an uncaught exception makes the robot die, so we need to catch exceptions.
@@ -47,7 +38,6 @@ public class RobotPlayer {
             }
         } else { //It's a turret
             try {
-                myAttackRange = rc.getType().attackRadiusSquared;
                 me = new Turret(rc);
             } catch (Exception e) {
                 System.out.println(e.getMessage());

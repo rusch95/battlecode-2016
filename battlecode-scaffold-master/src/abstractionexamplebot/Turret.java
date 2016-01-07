@@ -17,6 +17,7 @@ public class Turret implements RobotHandler {
     	this.myAttackRange = rc.getType().attackRadiusSquared;
     }
 
+    @Override
 	public void run() throws GameActionException {
 		// If this robot type can attack, check for enemies within range and attack one
         if (rc.isWeaponReady()) {

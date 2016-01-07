@@ -10,7 +10,6 @@ public class Archon implements RobotHandler {
     RobotType[] robotTypes = {RobotType.SCOUT, RobotType.SOLDIER, RobotType.SOLDIER, RobotType.SOLDIER,
             RobotType.GUARD, RobotType.GUARD, RobotType.VIPER, RobotType.TURRET};
     private Random rand;
-    private int myAttackRange = 0;
     private Team myTeam;
     private Team enemyTeam;
     private RobotController rc;
@@ -22,6 +21,7 @@ public class Archon implements RobotHandler {
     	this.enemyTeam = myTeam.opponent();
     }
     
+    @Override
 	public void run() throws GameActionException {
         int fate = rand.nextInt(1000);
         // Check if this ARCHON's core is ready

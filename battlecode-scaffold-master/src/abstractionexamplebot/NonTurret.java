@@ -22,6 +22,7 @@ public class NonTurret implements RobotHandler {
         this.myAttackRange = rc.getType().attackRadiusSquared;
     }
 
+    @Override
 	public void run() throws GameActionException {
 		int fate = rand.nextInt(1000);
 
