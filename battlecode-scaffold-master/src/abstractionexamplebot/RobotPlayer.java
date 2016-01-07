@@ -4,6 +4,13 @@ import battlecode.common.*;
 
 import java.util.Random;
 
+
+
+/**
+ * Tests indicate that this abstraction has a small overhead (~10bytecodes/300 total, but it might scale with increased calculation size)
+ * @author Ryan
+ *
+ */
 public class RobotPlayer {
 
     /**
@@ -21,7 +28,7 @@ public class RobotPlayer {
             	me = new Archon(rc);
             } catch (Exception e) {
                 // Throwing an uncaught exception makes the robot die, so we need to catch exceptions.
-                // Caught exceptions will result in a bytecode penalty.
+                // Caught exceptions will result in a bytecode penalty.a
                 System.out.println(e.getMessage());
                 e.printStackTrace();
             }
