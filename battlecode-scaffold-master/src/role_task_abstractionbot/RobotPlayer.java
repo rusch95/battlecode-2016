@@ -20,47 +20,26 @@ public class RobotPlayer {
     	 * Bytecode overhead looks to be about 40-50, with no information on whether or not it scales poorly
     	 * 
     	 * TODO: Parallelization of tasks?? ADT? Maybe unnecessary. Maybe just have subtasks or just helper methods.
+    	 * 
+    	 * CHANGE: Only one try/catch loop, since if exception, the robot isn't initializing anyways.
     	 */
     	
         // You can instantiate variables here.
     	Role me = null;
-    	
-        if (rc.getType() == RobotType.ARCHON) {
-            try {
-                // Any code here gets executed exactly once at the beginning of the game.
-            	me = new Archon(rc);
-            } catch (Exception e) {
-                // Throwing an uncaught exception makes the robot die, so we need to catch exceptions.
-                // Caught exceptions will result in a bytecode penalty.
-                System.out.println(e.getMessage());
-                e.printStackTrace();
-            }
-        } else if (rc.getType() != RobotType.TURRET) {
-            try {
-                // Any code here gets executed exactly once at the beginning of the game.
-            	me = new NonTurret(rc);
-            } catch (Exception e) {
-                // Throwing an uncaught exception makes the robot die, so we need to catch exceptions.
-                // Caught exceptions will result in a bytecode penalty.
-                System.out.println(e.getMessage());
-                e.printStackTrace();
-            }
-        } else { //Is a turret
-            try {
-            	me = new Turret(rc);
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
-                e.printStackTrace();
-            }
-        }
-        
-        //Run the Role, ONCE.
-        try {
-        	me.run();
-        } catch (Exception e) {
+    	try {
+	        if (rc.getType() == RobotType.ARCHON) {
+	        	me = new Archon(rc);
+	        } else if (rc.getType() != RobotType.TURRET) {
+	        	me = new NonTurret(rc);
+	        } else { //Is a turret
+	        	me = new Turret(rc);
+	        }
+	        //Run the Role, ONCE
+	        me.run();
+	        
+    	} catch (Exception e) {
             System.out.println(e.getMessage());
             e.printStackTrace();
-        }
-        
+    	}
     }
 }
