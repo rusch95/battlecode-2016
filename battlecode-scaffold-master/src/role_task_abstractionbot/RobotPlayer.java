@@ -27,8 +27,8 @@ public class RobotPlayer {
         // You can instantiate variables here.
     	Role me = null;
     	try {
-	        if (rc.getType() == RobotType.ARCHON) {
-	        	me = new Archon(rc);
+    		if (rc.getType() == RobotType.ARCHON) {
+    			me = new Archon(rc);
 	        } else if (rc.getType() != RobotType.TURRET) {
 	        	me = new NonTurret(rc);
 	        } else { //Is a turret
