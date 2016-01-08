@@ -18,6 +18,8 @@ public class RobotPlayer {
     	 * YOU MUST MUST MUST CATCH GameActionExceptions INSIDE of your loops, or they will break out.
     	 * 
     	 * Bytecode overhead looks to be about 40-50, with no information on whether or not it scales poorly
+    	 * 
+    	 * TODO: Parallelization of tasks?? ADT? Maybe unnecessary. Maybe just have subtasks or just helper methods.
     	 */
     	
         // You can instantiate variables here.
