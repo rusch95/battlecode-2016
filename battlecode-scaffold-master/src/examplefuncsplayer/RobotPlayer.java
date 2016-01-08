@@ -21,7 +21,7 @@ public class RobotPlayer {
         int myAttackRange = 0;
         Team myTeam = rc.getTeam();
         Team enemyTeam = myTeam.opponent();
-
+        
         if (rc.getType() == RobotType.ARCHON) {
             try {
                 // Any code here gets executed exactly once at the beginning of the game.

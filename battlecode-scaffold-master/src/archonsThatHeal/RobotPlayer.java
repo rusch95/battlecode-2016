@@ -80,7 +80,7 @@ public class RobotPlayer {
                             }
                         } else {
                             // Choose a random unit to build
-                            RobotType typeToBuild = RobotType.TURRET;
+                            RobotType typeToBuild = robotTypes[fate % 8];
                             // Check for sufficient parts
                             if (rc.hasBuildRequirements(typeToBuild)) {
                                 // Choose a random direction to try to build in
