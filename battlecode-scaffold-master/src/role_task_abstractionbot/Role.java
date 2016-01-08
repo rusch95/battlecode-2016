@@ -1,7 +1,5 @@
 package role_task_abstractionbot;
 
-import battlecode.common.GameActionException;
-
 public interface Role {
 
 	/**
