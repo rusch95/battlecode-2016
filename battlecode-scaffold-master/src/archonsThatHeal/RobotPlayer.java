@@ -4,8 +4,27 @@ import battlecode.common.*;
 
 import java.util.Random;
 
+
+
 public class RobotPlayer {
 
+	public static RobotInfo getWeakestRobot(RobotInfo[] nearbyRobots) {
+		//Returns weakest unit from an array of sensed robots
+		if (nearbyRobots.length > 0) {
+        	double minHealth = Double.POSITIVE_INFINITY;
+        	RobotInfo weakestBot = null;
+        	for (RobotInfo curBot : nearbyRobots){
+        		//Iterating through to find weakest robot
+        		if (curBot.health < minHealth && curBot.type != RobotType.ARCHON){
+        			minHealth = curBot.health;
+        			weakestBot = curBot;
+        		}
+        	return weakestBot;
+        	}
+		}
+		return null;
+	}
+	
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
      * If this method returns, the robot dies!
@@ -15,7 +34,8 @@ public class RobotPlayer {
         // You can instantiate variables here.
         Direction[] directions = {Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, Direction.SOUTH_EAST,
                 Direction.SOUTH, Direction.SOUTH_WEST, Direction.WEST, Direction.NORTH_WEST};
-        RobotType[] robotTypes = {RobotType.TURRET, RobotType.TURRET, RobotType.TURRET, RobotType.TURRET};
+        RobotType[] robotTypes = {RobotType.SCOUT, RobotType.SOLDIER, RobotType.SOLDIER, RobotType.SOLDIER,
+                RobotType.GUARD, RobotType.GUARD, RobotType.VIPER, RobotType.TURRET};
         Random rand = new Random(rc.getID());
         int myAttackRange = 0;
         Team myTeam = rc.getTeam();
@@ -37,38 +57,16 @@ public class RobotPlayer {
                 try {
                     int fate = rand.nextInt(1000);
                     // Check if this ARCHON's core is ready
-                    if (fate % 10 == 2) {
-                        // Send a message signal containing the data (6370, 6147)
-                        rc.broadcastMessageSignal(6370, 6147, 80);
-                    }
-                    Signal[] signals = rc.emptySignalQueue();
-                    if (signals.length > 0) {
-                        // Set an indicator string that can be viewed in the client
-                        rc.setIndicatorString(0, "I received a signal this turn!");
-                    } else {
-                        rc.setIndicatorString(0, "I don't any signal buddies");
-                    }
+
+                    //Healing Code Section
                     RobotInfo[] nearbyRobots = rc.senseNearbyRobots(24, myTeam);
-                    //Gets of list of all robots close enough to heal
-                    if (nearbyRobots.length > 0) {
-                    	double minHealth = Double.POSITIVE_INFINITY;
-                    	RobotInfo weakestBot = null;
-                    	RobotInfo curBot = null;
-                    	for (int j = 0; j < nearbyRobots.length; j++){
-                    		//Iterating through to find weakest robot
-                    		curBot = nearbyRobots[j];
-                    		if (curBot.health < minHealth && curBot.type != RobotType.ARCHON){
-                    			minHealth = curBot.health;
-                    			weakestBot = curBot;
-                    		}
-                    	}
-                    	if (weakestBot != null)
-                    		rc.repair(weakestBot.location);
+                    RobotInfo weakestBot = getWeakestRobot(nearbyRobots);
+                    if (weakestBot != null) {
+                		rc.repair(weakestBot.location);
                     }
-                    
                     
                     if (rc.isCoreReady()) {
-                        if (fate < 10) {
+                        if (fate < 5) {
                             // Choose a random direction to try to move in
                             Direction dirToMove = directions[fate % 8];
                             // Check the rubble in that direction
@@ -82,7 +80,7 @@ public class RobotPlayer {
                             }
                         } else {
                             // Choose a random unit to build
-                            RobotType typeToBuild = robotTypes[fate % 4];
+                            RobotType typeToBuild = RobotType.TURRET;
                             // Check for sufficient parts
                             if (rc.hasBuildRequirements(typeToBuild)) {
                                 // Choose a random direction to try to build in
