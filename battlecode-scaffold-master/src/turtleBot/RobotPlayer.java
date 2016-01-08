@@ -4,8 +4,38 @@ import battlecode.common.*;
 
 import java.util.Random;
 
+
+
 public class RobotPlayer {
 
+	public static RobotInfo getWeakestRobot(RobotInfo[] nearbyRobots) {
+		//Returns weakest unit from an array of sensed robots
+		if (nearbyRobots.length > 0) {
+        	double minHealth = Double.POSITIVE_INFINITY;
+        	RobotInfo weakestBot = null;
+        	for (RobotInfo curBot : nearbyRobots){
+        		//Iterating through to find weakest robot
+        		if (curBot.health < minHealth && curBot.type != RobotType.ARCHON){
+        			minHealth = curBot.health;
+        			weakestBot = curBot;
+        		}
+        	return weakestBot;
+        	}
+		}
+		return null;
+	}
+	
+	public static int getNumberOfUnitType(RobotInfo[] nearbyRobots, RobotType checkType) {
+		//Returns the number of specified type of unit from list of sensed robots
+		int numberOfType = 0;
+		for (RobotInfo robot : nearbyRobots) {
+			if (robot.type == checkType) {
+				numberOfType += 1;
+			}
+		}
+		return numberOfType;
+	}
+	
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
      * If this method returns, the robot dies!
@@ -19,19 +49,13 @@ public class RobotPlayer {
                 RobotType.GUARD, RobotType.GUARD, RobotType.VIPER, RobotType.TURRET};
         Random rand = new Random(rc.getID());
         int myAttackRange = 0;
+        int mySightRange = 0;
         Team myTeam = rc.getTeam();
         Team enemyTeam = myTeam.opponent();
-        
-        boolean doneWithSection = true;
-        Direction[] movePath = {Direction.SOUTH_WEST, Direction.NORTH, Direction.NORTH, Direction.EAST , 
-        		Direction.EAST, Direction.SOUTH, Direction.SOUTH, Direction.NORTH_WEST};
-        Object initialLocation = rc.getLocation();
-        rc.setIndicatorString(1, initialLocation.toString());
 
         if (rc.getType() == RobotType.ARCHON) {
             try {
-            	
-                
+                // Any code here gets executed exactly once at the beginning of the game.
             } catch (Exception e) {
                 // Throwing an uncaught exception makes the robot die, so we need to catch exceptions.
                 // Caught exceptions will result in a bytecode penalty.
@@ -45,48 +69,29 @@ public class RobotPlayer {
                 try {
                     int fate = rand.nextInt(1000);
                     // Check if this ARCHON's core is ready
-                    if (fate % 10 == 2) {
-                        // Send a message signal containing the data (6370, 6147)
-                        rc.broadcastMessageSignal(6370, 6147, 80);
-                    }
-                    Signal[] signals = rc.emptySignalQueue();
-                    if (signals.length > 0) {
-                        // Set an indicator string that can be viewed in the client
-                        rc.setIndicatorString(0, "I received a signal this turn!");
-                    } else {
-                        rc.setIndicatorString(0, "I don't any signal buddies");
+
+                    //Healing Code Section
+                    RobotInfo[] nearbyRobots = rc.senseNearbyRobots(24, myTeam);
+                    RobotInfo weakestBot = getWeakestRobot(nearbyRobots);
+                    if (weakestBot != null) {
+                		rc.repair(weakestBot.location);
                     }
                     
-            
-                    if (rc.isCoreReady()) {
-                        if (doneWithSection) {
-                            // Choose a random direction to try to move in
-                            Direction dirToMove = directions[fate % 8];
-                            // Check the rubble in that direction
-                            if (rc.senseRubble(rc.getLocation().add(dirToMove)) >= GameConstants.RUBBLE_OBSTRUCTION_THRESH) {
-                                // Too much rubble, so I should clear it
-                                rc.clearRubble(dirToMove);
-                                // Check if I can move in this direction
-                            } else if (rc.canMove(dirToMove)) {
-                                // Move
-                                rc.move(dirToMove);
-                            }
-                        } else {
-                            // Choose a random unit to build
-                            RobotType typeToBuild = RobotType.ARCHON;
-                            // Check for sufficient parts
-                            if (rc.hasBuildRequirements(typeToBuild)) {
-                                // Choose a random direction to try to build in
-                                Direction dirToBuild = directions[rand.nextInt(8)];
-                                for (int i = 0; i < 8; i++) {
-                                    // If possible, build in this direction
-                                    if (rc.canBuild(dirToBuild, typeToBuild)) {
-                                        rc.build(dirToBuild, typeToBuild);
-                                        break;
-                                    } else {
-                                        // Rotate the direction to try
-                                        dirToBuild = dirToBuild.rotateLeft();
-                                    }
+                    if (rc.isCoreReady()) { 
+                        // Choose a random unit to build
+                        RobotType typeToBuild = RobotType.TURRET;
+                        // Check for sufficient parts
+                        if (rc.hasBuildRequirements(typeToBuild)) {
+                            // Choose a random direction to try to build in
+                            Direction dirToBuild = directions[rand.nextInt(8)];
+                            for (int i = 0; i < 8; i++) {
+                                // If possible, build in this direction
+                                if (rc.canBuild(dirToBuild, typeToBuild)) {
+                                    rc.build(dirToBuild, typeToBuild);
+                                    break;
+                                } else {
+                                    // Rotate the direction to try
+                                    dirToBuild = dirToBuild.rotateLeft();
                                 }
                             }
                         }
@@ -102,6 +107,7 @@ public class RobotPlayer {
             try {
                 // Any code here gets executed exactly once at the beginning of the game.
                 myAttackRange = rc.getType().attackRadiusSquared;
+                mySightRange = rc.getType().sensorRadiusSquared;
             } catch (Exception e) {
                 // Throwing an uncaught exception makes the robot die, so we need to catch exceptions.
                 // Caught exceptions will result in a bytecode penalty.
@@ -115,28 +121,16 @@ public class RobotPlayer {
                 try {
                     int fate = rand.nextInt(1000);
 
-                    if (fate % 5 == 3) {
-                        // Send a normal signal
-                        rc.broadcastSignal(80);
-                    }
-
                     boolean shouldAttack = false;
 
                     // If this robot type can attack, check for enemies within range and attack one
                     if (myAttackRange > 0) {
-                        RobotInfo[] enemiesWithinRange = rc.senseNearbyRobots(myAttackRange, enemyTeam);
-                        RobotInfo[] zombiesWithinRange = rc.senseNearbyRobots(myAttackRange, Team.ZOMBIE);
+                        RobotInfo[] enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), myAttackRange);
                         if (enemiesWithinRange.length > 0) {
                             shouldAttack = true;
                             // Check if weapon is ready
                             if (rc.isWeaponReady()) {
-                                rc.attackLocation(enemiesWithinRange[rand.nextInt(enemiesWithinRange.length)].location);
-                            }
-                        } else if (zombiesWithinRange.length > 0) {
-                            shouldAttack = true;
-                            // Check if weapon is ready
-                            if (rc.isWeaponReady()) {
-                                rc.attackLocation(zombiesWithinRange[rand.nextInt(zombiesWithinRange.length)].location);
+                                rc.attackLocation(getWeakestRobot(enemiesWithinRange).location);
                             }
                         }
                     }
@@ -168,6 +162,7 @@ public class RobotPlayer {
         } else if (rc.getType() == RobotType.TURRET) {
             try {
                 myAttackRange = rc.getType().attackRadiusSquared;
+                mySightRange = rc.getType().sensorRadiusSquared;
             } catch (Exception e) {
                 System.out.println(e.getMessage());
                 e.printStackTrace();
@@ -178,26 +173,21 @@ public class RobotPlayer {
                 // at the end of it, the loop will iterate once per game round.
                 try {
                     // If this robot type can attack, check for enemies within range and attack one
-                    if (rc.isWeaponReady()) {
-                        RobotInfo[] enemiesWithinRange = rc.senseNearbyRobots(myAttackRange, enemyTeam);
-                        RobotInfo[] zombiesWithinRange = rc.senseNearbyRobots(myAttackRange, Team.ZOMBIE);
+                	boolean shouldAttack = false;
+                	
+                	if (myAttackRange > 0) {
+                        RobotInfo[] enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), myAttackRange);
                         if (enemiesWithinRange.length > 0) {
-                            for (RobotInfo enemy : enemiesWithinRange) {
-                                // Check whether the enemy is in a valid attack range (turrets have a minimum range)
-                                if (rc.canAttackLocation(enemy.location)) {
-                                    rc.attackLocation(enemy.location);
-                                    break;
-                                }
-                            }
-                        } else if (zombiesWithinRange.length > 0) {
-                            for (RobotInfo zombie : zombiesWithinRange) {
-                                if (rc.canAttackLocation(zombie.location)) {
-                                    rc.attackLocation(zombie.location);
-                                    break;
-                                }
+                            shouldAttack = true;
+                            // Check if weapon is ready
+                            if (rc.isWeaponReady()) {
+                                rc.attackLocation(getWeakestRobot(enemiesWithinRange).location);
                             }
                         }
                     }
+                	if (!shouldAttack) {
+                		RobotInfo[] nearbyRobots = rc.senseNearbyRobots(mySightRange, rc.getTeam());
+                	}
 
                     Clock.yield();
                 } catch (Exception e) {
@@ -207,9 +197,4 @@ public class RobotPlayer {
             }
         }
     }
-
-	private static Object getLocation() {
-		// TODO Auto-generated method stub
-		return null;
-	}
 }
