@@ -7,6 +7,7 @@ import battlecode.common.Clock;
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
+import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import battlecode.common.Team;
 
@@ -46,6 +47,8 @@ public class Scout implements Role {
 	
 	private void scan() throws GameActionException {
 		MapLocation[] nearbyLocations = MapLocation.getAllMapLocationsWithinRadiusSq(rc.getLocation(), RobotType.SCOUT.sensorRadiusSquared);
+		
+		RobotInfo[] hostilesNearby = rc.senseHostileRobots(rc.getLocation(), -1);
 		
 		MapLocation bestPartsPile = null;
 		double maxParts = 0;

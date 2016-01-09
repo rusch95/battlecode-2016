@@ -27,6 +27,7 @@ public class Archon implements Role {
 		while(true){
 			try {
 				Signal[] messages = rc.emptySignalQueue();
+				handleMessages(messages);
 				int fate = rand.nextInt(1000);
 				if(fate > 500 || rc.getTeamParts() > 50){ //50% chance of not building if we're low on parts, so other Archons can use the parts
 					if(rc.isCoreReady()) {
@@ -36,16 +37,13 @@ public class Archon implements Role {
 						else tryToBuild(RobotType.TURRET);
 					}
 				}
-				partsTarget = searchForParts();
-				for(Signal message : messages) {
-					if(message.getTeam().equals(myTeam) && message.getMessage()[0] == 45 && partsTarget == null) { //PARTS!
-						partsTarget = Utility.decodeLocation(message.getMessage()[1]);
-						break;
-					}
-				}
+				if(partsTarget == null) partsTarget = searchForParts();
 				if(partsTarget != null && rc.isCoreReady()) {
 					rc.setIndicatorDot(partsTarget, 100, 0, 0);
 					Utility.tryToMove(rc, rc.getLocation().directionTo(partsTarget));
+				}
+				if(partsTarget != null && partsTarget.equals(rc.getLocation())){
+					partsTarget = null;
 				}
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
@@ -54,6 +52,15 @@ public class Archon implements Role {
 			Clock.yield();
 		}
 		
+	}
+	
+	private void handleMessages(Signal[] messages) {
+		for(Signal message : messages) {
+			if(message.getTeam().equals(myTeam) && message.getMessage()[0] == 45 && partsTarget == null) { //PARTS!
+				partsTarget = Utility.decodeLocation(message.getMessage()[1]);
+				break;
+			}
+		}
 	}
 	
 	/**
