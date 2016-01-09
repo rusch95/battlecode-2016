@@ -21,6 +21,7 @@ public class NonTurretDerp implements Task {
     private Team myTeam;
     private Team enemyTeam;
     private RobotController rc;
+    private Direction dirToMove = Direction.NONE;
     static int[] tryDirections = {0,-1,1,-2,2};
     private MapLocation spotArchon = null;
 	
@@ -37,7 +38,7 @@ public class NonTurretDerp implements Task {
 		int fate = rand.nextInt(1000);
 
         boolean shouldAttack = false;
-        Direction dirToMove = Direction.NONE;
+        dirToMove = Direction.NONE;
         
         Signal[] signalQueue = rc.emptySignalQueue();
         
@@ -47,61 +48,47 @@ public class NonTurretDerp implements Task {
             RobotInfo[] enemiesWithinRange = rc.senseNearbyRobots(myAttackRange, enemyTeam);
             RobotInfo[] zombiesWithinRange = rc.senseNearbyRobots(myAttackRange, Team.ZOMBIE);
             if (enemiesWithinRange.length > 0) {
-                shouldAttack = true;
                 // Check if weapon is ready
-                if (rc.getType() == RobotType.TTM && fate < 250) {
-                	rc.unpack();
-                }
-                else if (rc.isWeaponReady()) {
+                if (rc.isWeaponReady()) {
                     rc.attackLocation(helperMeth.getWeakestRobot(enemiesWithinRange).location);
                 }
             } else if (zombiesWithinRange.length > 0) {
-                shouldAttack = true;
-                // Check if weapon is ready
-                if (rc.getType() == RobotType.TTM && fate < 250) {
-                	rc.unpack();
-                }
-                else if (rc.isWeaponReady()) {
+                if (rc.isWeaponReady()) {
                     rc.attackLocation(helperMeth.getWeakestRobot(zombiesWithinRange).location);
                 }
             } else {
             	RobotInfo weakestEnemy = enemiesSeen[0];
             	if (weakestEnemy != null)
             		dirToMove = rc.getLocation().directionTo(weakestEnemy.location);
-            	
+            		helperMeth.tryToMove(dirToMove, rc);           	
             }
         } else if (signalQueue.length > 0) {
         	int x = signalQueue[0].getMessage()[0];
         	int y = signalQueue[0].getMessage()[1];
         	MapLocation gotoLoc = new MapLocation(x,y);
-        	dirToMove = rc.getLocation().directionTo(gotoLoc);
+        	dirToMove = rc.getLocation().directionTo(gotoLoc); 
         	
         } else {
         	RobotInfo[] friendsSeen = rc.senseNearbyRobots(-1, rc.getTeam());
         	RobotInfo weakestFriend = helperMeth.getWeakestRobot(friendsSeen);
         	if (weakestFriend != null) {
-        		if (weakestFriend.health  < weakestFriend.maxHealth)
+        		if (weakestFriend.weaponDelay > 1)
         			dirToMove = rc.getLocation().directionTo(weakestFriend.location);
+        			helperMeth.tryToMove(dirToMove, rc);
         	}
-        	
         }
-        
-
-        if (dirToMove != Direction.NONE) {
-        	helperMeth.tryToMove(dirToMove, rc);
-        } else if (!shouldAttack) {
-        	if (rc.isCoreReady()) {
-            	if (rc.senseNearbyRobots(5, rc.getTeam()).length > 4) {             
-	                // Choose a random direction to try to move in
-            		if (dirToMove == Direction.NONE)
-            			dirToMove = directions[fate % 8];
-            		helperMeth.tryToMove(dirToMove, rc);
-                }
+    	if (rc.isCoreReady()) {
+    		//TODO change from magic numbers
+    		RobotInfo[] nearby = rc.senseNearbyRobots(16, rc.getTeam());
+        	if (nearby.length > 10 || fate < 150){             
+                // Choose a random direction to try to move in
+        		dirToMove = directions[fate % 8];
+        		helperMeth.tryToMove(dirToMove, rc);
+            } else if (nearby.length < 2 && nearby.length != 0 && fate % 3 == 2 && rc.getType() == RobotType.SOLDIER) {
+            	dirToMove = rc.getLocation().directionTo(nearby[0].location);
+            	helperMeth.tryToMove(dirToMove, rc);
             }
-        } else if (rc.getType() == RobotType.TTM && fate < 250) {
-        	rc.unpack();
         }
         return 1;
 	}
-
 }
