@@ -8,6 +8,7 @@ import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import battlecode.common.Team;
 import cheeseBot.Task;
+import cheeseBot.helperMeth;
 
 public class TurretDerp implements Task {
     private int myAttackRange;
@@ -22,16 +23,6 @@ public class TurretDerp implements Task {
     	this.enemyTeam = myTeam.opponent();
     	this.myAttackRange = rc.getType().attackRadiusSquared;
     	this.rand = new Random(rc.getID());
-	}
-
-	public static int getNumberOfBotOfType(RobotInfo[] nearbyRobots, RobotType botType) {
-		int numberOf = 0;
-		for (RobotInfo bot : nearbyRobots) {
-			if (bot.type == botType) {
-				numberOf += 1;
-			}
-		}
-		return numberOf;
 	}
 	
 	@Override
@@ -63,7 +54,7 @@ public class TurretDerp implements Task {
                 }   
             } else if (fate < 333) {
             	RobotInfo[] neighbors = rc.senseNearbyRobots(5, rc.getTeam());
-            	if (getNumberOfBotOfType(neighbors, RobotType.TURRET) > 2) {
+            	if (helperMeth.getNumberOfBotOfType(neighbors, RobotType.TURRET) > 2) {
             		if (rc.getType() == RobotType.TURRET)
             			rc.pack();
             			return 0;

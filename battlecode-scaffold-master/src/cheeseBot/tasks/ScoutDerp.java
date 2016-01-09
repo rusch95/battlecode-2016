@@ -11,6 +11,7 @@ import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import battlecode.common.Team;
 import cheeseBot.Task;
+import cheeseBot.helperMeth;
 
 public class ScoutDerp implements Task {
     Direction[] directions = {Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, Direction.SOUTH_EAST,
@@ -20,7 +21,8 @@ public class ScoutDerp implements Task {
     private Team enemyTeam;
     private RobotController rc;
     private int sightRange;
-    static int[] tryDirections = {0,-1,1,-2,2}; 
+    static int[] tryDirections = {0,-1,1,-2,2};
+    private MapLocation spotArchon = null;
 	
 	public ScoutDerp(RobotController rc) {
 		this.rc = rc;
@@ -29,36 +31,6 @@ public class ScoutDerp implements Task {
     	this.enemyTeam = myTeam.opponent();
     	this.sightRange = RobotType.SCOUT.sensorRadiusSquared;
 	}
-	
-	public static int getNumberOfBotOfType(RobotInfo[] nearbyRobots, RobotType botType) {
-		int numberOf = 0;
-		for (RobotInfo bot : nearbyRobots) {
-			if (bot.type == botType) {
-				numberOf += 1;
-			}
-		}
-		return numberOf;
-	}
-	
-	public void tryToMove(Direction forward) throws GameActionException{
-		if(rc.isCoreReady()){
-			for(int deltaD:tryDirections){
-				Direction maybeForward = Direction.values()[(forward.ordinal()+deltaD+8)%8];
-				if(rc.canMove(maybeForward)){
-					rc.move(maybeForward);
-					return;
-				}
-			}
-			if(rc.getType().canClearRubble()){
-				//failed to move, look to clear rubble
-				MapLocation ahead = rc.getLocation().add(forward);
-				if(rc.senseRubble(ahead)>=GameConstants.RUBBLE_OBSTRUCTION_THRESH){
-					rc.clearRubble(forward);
-				}
-			}
-		}
-	}
-	
 
 	@Override
 	public int run() throws GameActionException {
@@ -66,23 +38,28 @@ public class ScoutDerp implements Task {
 
         Direction dirToMove = Direction.NONE;
 
-        // If this robot type can attack, check for enemies within range and attack one
-
-        final MapLocation[] sensedLocations = rc.getLocation().getAllMapLocationsWithinRadiusSq(rc.getLocation(), sightRange);
-        MapLocation partsLocation = null;
-    	for (MapLocation location : sensedLocations) {
-    		if (rc.senseParts(location) > 0) {
-    			partsLocation = location;
-    		}
-    	}
-
-        if (true) {
+        RobotInfo[] allEnemies = rc.senseHostileRobots(rc.getLocation(), -1);
+        RobotInfo[] enemies = rc.senseNearbyRobots(-1, enemyTeam);
+        
+        if (enemies.length > 0) {
+        	dirToMove = rc.getLocation().directionTo((enemies[fate % enemies.length].location));
+        	helperMeth.tryToMove(dirToMove, rc);
+        	for (RobotInfo e : allEnemies) {
+        		if (e.type == RobotType.ARCHON && rc.getRoundNum() > 100) {
+        			spotArchon = e.location;
+        			rc.broadcastMessageSignal(spotArchon.x, spotArchon.y, 3000);
+        			break;
+        		} //else if (e.type == RobotType.ZOMBIEDEN) {
+        		//	spotArchon = e.location;
+        		//	rc.broadcastMessageSignal(spotArchon.x, spotArchon.y, 1000);
+        		//}
+        	}
+		} else {
         	if (rc.isCoreReady()) {
                 // Choose a random direction to try to move in
-        		if (dirToMove == Direction.NONE)
-        			dirToMove = directions[fate % 8];
+        		dirToMove = directions[fate % 8];
                 // Check the rubble in that direction
-        		tryToMove(dirToMove);
+        		helperMeth.tryToMove(dirToMove, rc);
             }
         }
         return 2;

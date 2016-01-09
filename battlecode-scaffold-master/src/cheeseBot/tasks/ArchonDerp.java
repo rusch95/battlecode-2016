@@ -10,12 +10,13 @@ import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import cheeseBot.Task;
+import cheeseBot.helperMeth;
 
 public class ArchonDerp implements Task {
     Direction[] directions = {Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, Direction.SOUTH_EAST,
             Direction.SOUTH, Direction.SOUTH_WEST, Direction.WEST, Direction.NORTH_WEST};
     RobotType[] robotTypes = {RobotType.SCOUT, RobotType.SOLDIER, RobotType.SOLDIER, RobotType.SOLDIER,
-            RobotType.GUARD, RobotType.GUARD, RobotType.VIPER, RobotType.TURRET};
+            RobotType.GUARD, RobotType.GUARD, RobotType.SOLDIER, RobotType.TURRET};
     private Random rand;
     private RobotController rc;
     private int sightRange;
@@ -40,48 +41,9 @@ public class ArchonDerp implements Task {
         			minHealth = curBot.health;
         			weakestBot = curBot;
         		}
-        	
         	}
 		}
 		return weakestBot;
-	}
-	
-	public RobotInfo getClosestRobot(RobotInfo[] nearbyRobots) {
-		//Returns weakest unit from an array of sensed robots
-		if (nearbyRobots.length > 0) {
-        	int distance = Integer.MAX_VALUE;
-        	RobotInfo closestBot = null;
-        	int curDistance = 0;
-        	for (RobotInfo curBot : nearbyRobots){
-        		//Iterating through to find closest robot
-        		curDistance = curBot.location.distanceSquaredTo(rc.getLocation());
-        		if (curDistance < distance && curBot.type != RobotType.ARCHON) {
-        			distance = curDistance;
-        			closestBot = curBot;
-        		}
-        	return closestBot;
-        	}
-		}
-		return null;
-	}
-	
-	public void tryToMove(Direction forward) throws GameActionException{
-		if(rc.isCoreReady()){
-			for(int deltaD:tryDirections){
-				Direction maybeForward = Direction.values()[(forward.ordinal()+deltaD+8)%8];
-				if(rc.canMove(maybeForward)){
-					rc.move(maybeForward);
-					return;
-				}
-			}
-			if(rc.getType().canClearRubble()){
-				//failed to move, look to clear rubble
-				MapLocation ahead = rc.getLocation().add(forward);
-				if(rc.senseRubble(ahead)>=GameConstants.RUBBLE_OBSTRUCTION_THRESH){
-					rc.clearRubble(forward);
-				}
-			}
-		}
 	}
 	
 	@Override
@@ -114,7 +76,7 @@ public class ArchonDerp implements Task {
             if (partsLocation != null && fate % 7 == 1) {
             	// Get direction towards parts if seen
             	Direction dirToMove = rc.getLocation().directionTo(partsLocation);
-            	tryToMove(dirToMove);
+            	helperMeth.tryToMove(dirToMove, rc);
             	if (rc.senseParts(rc.getLocation()) > 0 || (fate % 10 == 1)) {
             		// Grabbed parts, so empty partsLocation of this spot
             		partsLocation = null;
@@ -125,13 +87,15 @@ public class ArchonDerp implements Task {
         			MapLocation enemyLoc = enemies[0].location;
         			if (enemyLoc != null) {
         				Direction dirToMove = enemyLoc.directionTo(rc.getLocation());
-        				tryToMove(dirToMove);
+        				helperMeth.tryToMove(dirToMove, rc);
         			}
         		}
             } else if (fate < 333 && rc.isCoreReady()) {
                 // Choose a random unit to build
             	RobotType typeToBuild = null;
-            	if (rc.getRobotCount() < 40) {
+            	if (rc.getRoundNum() < 30) {
+            		typeToBuild = RobotType.SCOUT;
+            	} else if (rc.getRobotCount() < 90) {
                 	typeToBuild = robotTypes[fate % 8];
             	}
             	else {

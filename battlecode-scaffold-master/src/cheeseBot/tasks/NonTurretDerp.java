@@ -4,13 +4,14 @@ import java.util.Random;
 
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
-import battlecode.common.GameConstants;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
+import battlecode.common.Signal;
 import battlecode.common.Team;
 import cheeseBot.Task;
+import cheeseBot.helperMeth;
 
 public class NonTurretDerp implements Task {
     Direction[] directions = {Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, Direction.SOUTH_EAST,
@@ -21,6 +22,7 @@ public class NonTurretDerp implements Task {
     private Team enemyTeam;
     private RobotController rc;
     static int[] tryDirections = {0,-1,1,-2,2};
+    private MapLocation spotArchon = null;
 	
 	public NonTurretDerp(RobotController rc) {
 		this.rc = rc;
@@ -29,52 +31,6 @@ public class NonTurretDerp implements Task {
     	this.enemyTeam = myTeam.opponent();
         this.myAttackRange = rc.getType().attackRadiusSquared;   
 	}
-	
-	public static RobotInfo getWeakestRobot(RobotInfo[] nearbyRobots) {
-		//Returns weakest unit from an array of sensed robots
-		if (nearbyRobots.length > 0) {
-        	double minHealth = Double.POSITIVE_INFINITY;
-        	RobotInfo weakestBot = null;
-        	for (RobotInfo curBot : nearbyRobots){
-        		//Iterating through to find weakest robot
-        		if (curBot.health < minHealth) {
-        			minHealth = curBot.health;
-        			weakestBot = curBot;
-        		}
-        	return weakestBot;
-        	}
-		}
-		return null;
-	}
-	
-	public static int getNumberOfBotOfType(RobotInfo[] nearbyRobots, RobotType botType) {
-		int numberOf = 0;
-		for (RobotInfo bot : nearbyRobots) {
-			if (bot.type == botType) {
-				numberOf += 1;
-			}
-		}
-		return numberOf;
-	}
-	
-	public void tryToMove(Direction forward) throws GameActionException{
-		if(rc.isCoreReady()){
-			for(int deltaD:tryDirections){
-				Direction maybeForward = Direction.values()[(forward.ordinal()+deltaD+8)%8];
-				if(rc.canMove(maybeForward)){
-					rc.move(maybeForward);
-					return;
-				}
-			}
-			if(rc.getType().canClearRubble()){
-				//failed to move, look to clear rubble
-				MapLocation ahead = rc.getLocation().add(forward);
-				if(rc.senseRubble(ahead)>=GameConstants.RUBBLE_OBSTRUCTION_THRESH){
-					rc.clearRubble(forward);
-				}
-			}
-		}
-	}
 
 	@Override
 	public int run() throws GameActionException {
@@ -82,7 +38,9 @@ public class NonTurretDerp implements Task {
 
         boolean shouldAttack = false;
         Direction dirToMove = Direction.NONE;
-
+        
+        Signal[] signalQueue = rc.emptySignalQueue();
+        
         // If this robot type can attack, check for enemies within range and attack one
         RobotInfo[] enemiesSeen = rc.senseHostileRobots(rc.getLocation(), -1);
         if (enemiesSeen.length > 0) {
@@ -95,7 +53,7 @@ public class NonTurretDerp implements Task {
                 	rc.unpack();
                 }
                 else if (rc.isWeaponReady()) {
-                    rc.attackLocation(getWeakestRobot(enemiesWithinRange).location);
+                    rc.attackLocation(helperMeth.getWeakestRobot(enemiesWithinRange).location);
                 }
             } else if (zombiesWithinRange.length > 0) {
                 shouldAttack = true;
@@ -104,7 +62,7 @@ public class NonTurretDerp implements Task {
                 	rc.unpack();
                 }
                 else if (rc.isWeaponReady()) {
-                    rc.attackLocation(getWeakestRobot(zombiesWithinRange).location);
+                    rc.attackLocation(helperMeth.getWeakestRobot(zombiesWithinRange).location);
                 }
             } else {
             	RobotInfo weakestEnemy = enemiesSeen[0];
@@ -112,9 +70,15 @@ public class NonTurretDerp implements Task {
             		dirToMove = rc.getLocation().directionTo(weakestEnemy.location);
             	
             }
+        } else if (signalQueue.length > 0) {
+        	int x = signalQueue[0].getMessage()[0];
+        	int y = signalQueue[0].getMessage()[1];
+        	MapLocation gotoLoc = new MapLocation(x,y);
+        	dirToMove = rc.getLocation().directionTo(gotoLoc);
+        	
         } else {
         	RobotInfo[] friendsSeen = rc.senseNearbyRobots(-1, rc.getTeam());
-        	RobotInfo weakestFriend = getWeakestRobot(friendsSeen);
+        	RobotInfo weakestFriend = helperMeth.getWeakestRobot(friendsSeen);
         	if (weakestFriend != null) {
         		if (weakestFriend.health  < weakestFriend.maxHealth)
         			dirToMove = rc.getLocation().directionTo(weakestFriend.location);
@@ -124,15 +88,14 @@ public class NonTurretDerp implements Task {
         
 
         if (dirToMove != Direction.NONE) {
-        	tryToMove(dirToMove);
+        	helperMeth.tryToMove(dirToMove, rc);
         } else if (!shouldAttack) {
         	if (rc.isCoreReady()) {
-            	if (rc.senseNearbyRobots(5, rc.getTeam()).length > 4) {
-	               
+            	if (rc.senseNearbyRobots(5, rc.getTeam()).length > 4) {             
 	                // Choose a random direction to try to move in
             		if (dirToMove == Direction.NONE)
             			dirToMove = directions[fate % 8];
-            		tryToMove(dirToMove);
+            		helperMeth.tryToMove(dirToMove, rc);
                 }
             }
         } else if (rc.getType() == RobotType.TTM && fate < 250) {

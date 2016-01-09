@@ -1,8 +1,10 @@
 package cheeseBot.roles;
 
-import cheeseBot.*;
-import cheeseBot.tasks.*;
-import battlecode.common.*;
+import battlecode.common.Clock;
+import battlecode.common.RobotController;
+import cheeseBot.Role;
+import cheeseBot.Task;
+import cheeseBot.tasks.ArchonDerp;
 
 public class Archon implements Role {
 	private RobotController rc;
