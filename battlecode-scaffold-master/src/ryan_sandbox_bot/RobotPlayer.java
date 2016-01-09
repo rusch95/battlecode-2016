@@ -38,8 +38,6 @@ public class RobotPlayer {
 	        	;;
 	        } else if (rc.getType() == RobotType.SCOUT) {
 	        	me = new Scout(rc);
-	        } else if (rc.getType() == RobotType.SOLDIER) {
-	        	;;
 	        } else if (rc.getType() == RobotType.VIPER) {
 	        	;;
 	        } else { //This shouldn't be reached
