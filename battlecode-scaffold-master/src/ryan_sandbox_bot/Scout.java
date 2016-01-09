@@ -1,5 +1,6 @@
 package ryan_sandbox_bot;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
 
@@ -18,6 +19,7 @@ public class Scout implements Role {
     private final Team otherTeam;
     private final MapLocation birthplace;
     private final HashMap<MapLocation, Integer> theMap;
+    private final ArrayList<MapLocation> dens;
     
 	public Scout(RobotController rc){
 		this.rc = rc;
@@ -26,6 +28,7 @@ public class Scout implements Role {
 		this.otherTeam = myTeam.opponent();
 		this.birthplace = rc.getLocation();
 		this.theMap = new HashMap<MapLocation, Integer>();
+		this.dens = new ArrayList<MapLocation>();
 	}
 	
 	@Override
@@ -54,20 +57,27 @@ public class Scout implements Role {
 		double maxParts = 0;
 		double totalParts = 0;
 		
+		for(RobotInfo robot : hostilesNearby) {
+			if(robot.type == RobotType.ZOMBIEDEN && !dens.contains(robot.location)) {
+				rc.setIndicatorDot(robot.location, 250, 0, 0);
+				rc.setIndicatorLine(rc.getLocation(), robot.location, 255, 0, 0);
+				rc.broadcastMessageSignal(66, Utility.encodeLocation(robot.location), 500);
+				dens.add(robot.location);
+			}
+		}
+		
 		for(MapLocation location : nearbyLocations) {
-			
 			double parts = rc.senseParts(location);
 			totalParts += parts;
 			if(parts > maxParts) {
 				bestPartsPile = location;
 				maxParts = parts;
 			}
-			
 		}
 		
 		if(totalParts >= 100) { //Broadcast parts location
 			rc.setIndicatorDot(bestPartsPile, 0, 100, 0);
-			rc.broadcastMessageSignal(45, Utility.encodeLocation(bestPartsPile), 50);
+			rc.broadcastMessageSignal(45, Utility.encodeLocation(bestPartsPile), 100);
 		}
 		
 	}

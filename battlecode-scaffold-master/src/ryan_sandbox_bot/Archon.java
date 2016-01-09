@@ -26,14 +26,15 @@ public class Archon implements Role {
 	public void run() {
 		while(true){
 			try {
+				int fate = rand.nextInt(1000);
+				if(fate % 4 == 1) partsTarget = null;
 				Signal[] messages = rc.emptySignalQueue();
 				handleMessages(messages);
-				int fate = rand.nextInt(1000);
-				if(fate > 500 || rc.getTeamParts() > 50){ //50% chance of not building if we're low on parts, so other Archons can use the parts
+				if(fate > 700 || rc.getTeamParts() > 50){ //% chance of not building if we're low on parts, so other Archons can use the parts
 					if(rc.isCoreReady()) {
 						if(fate > 800)
 							tryToBuild(RobotType.SOLDIER);
-						else if(fate > 700) tryToBuild(RobotType.SCOUT);
+						//else if(fate > 700) tryToBuild(RobotType.SCOUT);
 						else tryToBuild(RobotType.TURRET);
 					}
 				}
