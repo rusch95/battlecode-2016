@@ -1,7 +1,6 @@
 package ryan_sandbox_bot;
-import battlecode.common.*;
-
-import ryan_sandbox_bot.roles.*;
+import battlecode.common.RobotController;
+import battlecode.common.RobotType;
 
 public class RobotPlayer {
 

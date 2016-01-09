@@ -1,6 +1,6 @@
 package ryan_sandbox_bot;
 
-import battlecode.common.*;
+import battlecode.common.GameActionException;
 
 public interface Task {
 

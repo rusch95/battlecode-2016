@@ -2,7 +2,14 @@ package ryan_sandbox_bot;
 
 import java.util.Random;
 
-import battlecode.common.*;
+import battlecode.common.Clock;
+import battlecode.common.Direction;
+import battlecode.common.GameActionException;
+import battlecode.common.MapLocation;
+import battlecode.common.RobotController;
+import battlecode.common.RobotType;
+import battlecode.common.Signal;
+import battlecode.common.Team;
 
 public class Archon implements Role {
 	private RobotController rc;
