@@ -20,6 +20,7 @@ public class ScoutDerp implements Task {
     private Team enemyTeam;
     private RobotController rc;
     private int sightRange;
+    static int[] tryDirections = {0,-1,1,-2,2}; 
 	
 	public ScoutDerp(RobotController rc) {
 		this.rc = rc;
@@ -37,6 +38,25 @@ public class ScoutDerp implements Task {
 			}
 		}
 		return numberOf;
+	}
+	
+	public void tryToMove(Direction forward) throws GameActionException{
+		if(rc.isCoreReady()){
+			for(int deltaD:tryDirections){
+				Direction maybeForward = Direction.values()[(forward.ordinal()+deltaD+8)%8];
+				if(rc.canMove(maybeForward)){
+					rc.move(maybeForward);
+					return;
+				}
+			}
+			if(rc.getType().canClearRubble()){
+				//failed to move, look to clear rubble
+				MapLocation ahead = rc.getLocation().add(forward);
+				if(rc.senseRubble(ahead)>=GameConstants.RUBBLE_OBSTRUCTION_THRESH){
+					rc.clearRubble(forward);
+				}
+			}
+		}
 	}
 	
 
@@ -62,14 +82,7 @@ public class ScoutDerp implements Task {
         		if (dirToMove == Direction.NONE)
         			dirToMove = directions[fate % 8];
                 // Check the rubble in that direction
-                if (rc.senseRubble(rc.getLocation().add(dirToMove)) >= GameConstants.RUBBLE_OBSTRUCTION_THRESH) {
-                    // Too much rubble, so I should clear it
-                    rc.clearRubble(dirToMove);
-                    // Check if I can move in this direction
-                } else if (rc.canMove(dirToMove)) {
-                    // Move
-                    rc.move(dirToMove);
-                }
+        		tryToMove(dirToMove);
             }
         }
         return 2;

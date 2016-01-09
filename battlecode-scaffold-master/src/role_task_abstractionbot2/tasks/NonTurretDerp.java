@@ -5,6 +5,7 @@ import java.util.Random;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.GameConstants;
+import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
@@ -19,13 +20,14 @@ public class NonTurretDerp implements Task {
     private Team myTeam;
     private Team enemyTeam;
     private RobotController rc;
+    static int[] tryDirections = {0,-1,1,-2,2};
 	
 	public NonTurretDerp(RobotController rc) {
 		this.rc = rc;
     	this.rand = new Random(rc.getID());
     	this.myTeam = rc.getTeam();
     	this.enemyTeam = myTeam.opponent();
-        this.myAttackRange = rc.getType().attackRadiusSquared;
+        this.myAttackRange = rc.getType().attackRadiusSquared;   
 	}
 	
 	public static RobotInfo getWeakestRobot(RobotInfo[] nearbyRobots) {
@@ -55,7 +57,24 @@ public class NonTurretDerp implements Task {
 		return numberOf;
 	}
 	
-	
+	public void tryToMove(Direction forward) throws GameActionException{
+		if(rc.isCoreReady()){
+			for(int deltaD:tryDirections){
+				Direction maybeForward = Direction.values()[(forward.ordinal()+deltaD+8)%8];
+				if(rc.canMove(maybeForward)){
+					rc.move(maybeForward);
+					return;
+				}
+			}
+			if(rc.getType().canClearRubble()){
+				//failed to move, look to clear rubble
+				MapLocation ahead = rc.getLocation().add(forward);
+				if(rc.senseRubble(ahead)>=GameConstants.RUBBLE_OBSTRUCTION_THRESH){
+					rc.clearRubble(forward);
+				}
+			}
+		}
+	}
 
 	@Override
 	public int run() throws GameActionException {
@@ -105,17 +124,7 @@ public class NonTurretDerp implements Task {
         
 
         if (dirToMove != Direction.NONE) {
-            if (rc.isCoreReady()) {
-                // Check the rubble in that direction
-                if (rc.senseRubble(rc.getLocation().add(dirToMove)) >= GameConstants.RUBBLE_OBSTRUCTION_THRESH) {
-                    // Too much rubble, so I should clear it
-                    rc.clearRubble(dirToMove);
-                    // Check if I can move in this direction
-                } else if (rc.canMove(dirToMove)) {
-                    // Move
-                    rc.move(dirToMove);
-                }             
-            }
+        	tryToMove(dirToMove);
         } else if (!shouldAttack) {
         	if (rc.isCoreReady()) {
             	if (rc.senseNearbyRobots(5, rc.getTeam()).length > 4) {
@@ -123,15 +132,7 @@ public class NonTurretDerp implements Task {
 	                // Choose a random direction to try to move in
             		if (dirToMove == Direction.NONE)
             			dirToMove = directions[fate % 8];
-	                // Check the rubble in that direction
-	                if (rc.senseRubble(rc.getLocation().add(dirToMove)) >= GameConstants.RUBBLE_OBSTRUCTION_THRESH) {
-	                    // Too much rubble, so I should clear it
-	                    rc.clearRubble(dirToMove);
-	                    // Check if I can move in this direction
-	                } else if (rc.canMove(dirToMove)) {
-	                    // Move
-	                    rc.move(dirToMove);
-	                }
+            		tryToMove(dirToMove);
                 }
             }
         } else if (rc.getType() == RobotType.TTM && fate < 250) {

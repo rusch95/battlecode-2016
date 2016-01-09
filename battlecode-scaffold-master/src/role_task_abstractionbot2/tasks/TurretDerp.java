@@ -66,7 +66,7 @@ public class TurretDerp implements Task {
             	if (getNumberOfBotOfType(neighbors, RobotType.TURRET) > 2) {
             		if (rc.getType() == RobotType.TURRET)
             			rc.pack();
-            			return 1;
+            			return 0;
             	}
             	
             }
