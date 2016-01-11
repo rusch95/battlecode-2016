@@ -20,13 +20,28 @@ public class Comms {
 	 * 
 	 */
 	
-	//Message codes
+	//~~~~~~~~~~~~~~~~MESSAGE CODES~~~~~~~~~~~~~~~~~~~~
+	
+	//Recon messages
 	public static final int DEN_FOUND = 66; //If a den is scouted
 	public static final int ENEMY_ARCHON_SIGHTED = 70; //If an archon is scouted
-	public static final int TURRET_ATTACK_HERE = 55; //For targeting outside a turret's sight radius
 	public static final int PANIC = 75; //If there's a serious horde coming and more defenses are needed probably
 	public static final int SCOUT_DYING = 40; //A scout's dying hail mary
 	public static final int PARTS_FOUND = 44; //Found a parts pile
+	
+	//Targeting messages
+	public static final int TURRET_ATTACK_HERE = 55; //For targeting outside a turret's sight radius
+	
+	//Archon commands
+	public static final int PLEASE_EXPLORE = 20; //Designating a scout to be an explorer
+	public static final int PLEASE_TARGET = 21; //Designating a scout to target for a turret
+	public static final int PLEASE_BAIT = 22; //Designating a scout to be zombie bait
+	
+	public static final int ATTACK_DEN = 30; //Designating all units to attack a den location.
+	public static final int ATTACK_ENEMY = 31; //Designating all units to attack an enemy location
+	public static final int DONT_ATTACK = 35; //Designating all units to ignore an attack message
+	
+	public static final int MIGRATE = 37; //Designating ALL troops to regroup near here
 	
 	/**
 	 * Creates the first int of a message from the code digits and the aux digits
