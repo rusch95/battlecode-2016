@@ -1,12 +1,10 @@
 package sprintTourneyBot;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Random;
 
 import battlecode.common.Clock;
 import battlecode.common.GameActionException;
-import battlecode.common.GameConstants;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
@@ -19,11 +17,23 @@ public class Scout implements Role {
     private final Team myTeam;
     private final Team otherTeam;
     private final MapLocation birthplace;
-    private final HashMap<MapLocation, Integer> theMap;
     private final ArrayList<MapLocation> dens;
     private final ArrayList<MapLocation> enemyArchons;
     private final int state;
     private MapLocation target;
+    
+    private final static int sensorRadiusSquared = RobotType.SCOUT.sensorRadiusSquared;
+    private final static int sensorRadius = (int)Math.pow(sensorRadiusSquared, 0.5); //Rounded down? What does sqrt(53) even signify for range?
+    
+    private int minX = 0;
+    private int maxX = Integer.MAX_VALUE;
+    private int minY = 0;
+    private int maxY = Integer.MAX_VALUE;
+    
+    private boolean minXFound = false;
+    private boolean maxXFound = false;
+    private boolean minYFound = false;
+    private boolean maxYFound = false;
     
     //Possible states
     private final static int EXPLORING = 1;
@@ -38,8 +48,9 @@ public class Scout implements Role {
 
 		this.state = EXPLORING;
 		
+		this.target = rc.getLocation();
+		
 		this.birthplace = rc.getLocation();
-		this.theMap = new HashMap<MapLocation, Integer>();
 		this.dens = new ArrayList<MapLocation>();
 		this.enemyArchons = new ArrayList<MapLocation>();
 	}
@@ -48,13 +59,16 @@ public class Scout implements Role {
 	public void run() {
 		while(true){
 			try {
+				int fate = rand.nextInt(1000);
 				handleMessages();
 				if(state == EXPLORING) {
-					rc.setIndicatorString(0, "I am EXPLORING");
 					scan();
-					if(target == null || rc.getLocation().distanceSquaredTo(target) < 4) { //Magic number
+					if(rc.getLocation().distanceSquaredTo(target) < 4 || rc.getRoundNum()%20 == 1) { //Magic number
 						reassignTarget();
 					}
+					rc.setIndicatorString(1, "My X bounds are: " + String.valueOf(minX) + String.valueOf(minXFound) + " and " + String.valueOf(maxX) + String.valueOf(maxXFound));
+					rc.setIndicatorString(2, "My Y bounds are: " + String.valueOf(minY) + String.valueOf(minYFound) + " and " + String.valueOf(maxY) + String.valueOf(maxYFound));
+					rc.setIndicatorDot(target, 250, 0, 0);
 					moveTowardsTarget();
 				}
 				else if(state == BAITING) {
@@ -85,23 +99,115 @@ public class Scout implements Role {
 	 * @throws GameActionException
 	 */
 	private void scan() throws GameActionException {
-		RobotInfo[] hostilesNearby = rc.senseHostileRobots(rc.getLocation(), RobotType.SCOUT.sensorRadiusSquared);
-		RobotInfo[] friendliesNearby = rc.senseNearbyRobots(RobotType.SCOUT.sensorRadiusSquared, myTeam);
+		RobotInfo[] hostilesNearby = rc.senseHostileRobots(rc.getLocation(), -1);
+		RobotInfo[] hostilesVeryNearby = rc.senseHostileRobots(rc.getLocation(), 15);
+		RobotInfo[] friendliesNearby = rc.senseNearbyRobots(20, myTeam);
 		
-		MapLocation[] tilesNearby = MapLocation.getAllMapLocationsWithinRadiusSq(rc.getLocation(), RobotType.SCOUT.sensorRadiusSquared);
+		MapLocation[] partsNearby = rc.sensePartLocations(-1);
+		MapLocation[] tilesNearby = MapLocation.getAllMapLocationsWithinRadiusSq(rc.getLocation(), sensorRadiusSquared);
+		
+		if(hostilesVeryNearby.length > 0 && rc.getHealth() < 10) { //HAIL MARY I'M DYING
+			rc.broadcastMessageSignal(Comms.createHeader(Comms.SCOUT_DYING), 0, 100);
+		}
+		
+		scanForBounds();
 		
 		for(RobotInfo hostile : hostilesNearby) {
 			if(hostile.type.equals(RobotType.ZOMBIEDEN) && !dens.contains(hostile.location)) { //New den sighted
 				dens.add(hostile.location);
-				rc.broadcastMessageSignal(Comms.createHeader(Comms.DEN_FOUND), Comms.encodeLocation(hostile.location), 100); //TODO change the range to something smarter
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.DEN_FOUND), Comms.encodeLocation(hostile.location), broadcastDistance());
 			}
 			else if(hostile.type.equals(RobotType.ARCHON) && !enemyArchons.contains(hostile.location)) { //Enemy Archon sighted TODO: make the archon tracking smarter (by ids or something)
 				enemyArchons.add(hostile.location);
-				rc.broadcastMessageSignal(Comms.createHeader(Comms.ENEMY_ARCHON_SIGHTED), Comms.encodeLocation(hostile.location), 100); //TODO change the range to something smarter
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.ENEMY_ARCHON_SIGHTED), Comms.encodeLocation(hostile.location), broadcastDistance());
 			}
 			
 		}
 		
+	}
+	
+	/**
+	 * Scans for Map Edges
+	 * @throws GameActionException 
+	 */
+	private void scanForBounds() throws GameActionException {
+		MapLocation cur = rc.getLocation();
+		if(!minXFound){
+			for(int x = cur.x-sensorRadius+1; x <= cur.x; x++){
+				MapLocation tile = new MapLocation(x, cur.y);
+				if(!rc.onTheMap(tile)) {//Found a boundary
+					minXFound = true;
+					minX = x + 1;
+				}
+				else break;
+			}
+			if(minXFound) {
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MINX), minX, broadcastDistance());
+				target = putInMap(target);
+			}
+		}
+		if(!maxXFound){
+			for(int x = cur.x+sensorRadius-1; x >= cur.x; x--){
+				MapLocation tile = new MapLocation(x, cur.y);
+				if(!rc.onTheMap(tile)) {//Found a boundary
+					maxXFound = true;
+					maxX = x - 1;
+				}
+				else break;
+			}
+			if(maxXFound) {
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MAXX), maxX, broadcastDistance());
+				target = putInMap(target);
+			}
+		}
+		if(!minYFound){
+			for(int y = cur.y-sensorRadius+1; y <= cur.y; y++){
+				MapLocation tile = new MapLocation(cur.x, y);
+				if(!rc.onTheMap(tile)) {//Found a boundary
+					minYFound = true;
+					minY = y + 1;
+				}
+				else break;
+			}
+			if(minYFound) {
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MINY), minY, broadcastDistance());
+				target = putInMap(target);
+			}
+		}
+		if(!maxYFound){
+			for(int y = cur.y+sensorRadius-1; y >= cur.y; y--){
+				MapLocation tile = new MapLocation(cur.x, y);
+				if(!rc.onTheMap(tile)) {//Found a boundary
+					maxYFound = true;
+					maxY = y - 1;
+				}
+				else break;
+			}
+			if(maxYFound) {
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MAXY), maxY, broadcastDistance());
+				target = putInMap(target);
+			}
+		}
+	}
+	
+	private MapLocation putInMap(MapLocation location){
+		int x, y;
+		if(location.x < minX) x = minX;
+		else if(location.x > maxX) x = maxX;
+		else x = location.x;
+		if(location.y < minY) y = minY;
+		else if(location.y > maxY) y = maxY;
+		else y = location.y;
+		return new MapLocation(x,y);
+	}
+	
+	
+	/**
+	 * Calculates a good distance to broadcast
+	 * @return distance
+	 */
+	private int broadcastDistance() {
+		return rc.getLocation().distanceSquaredTo(birthplace)+10;
 	}
 	
 	/**
@@ -113,13 +219,8 @@ public class Scout implements Role {
 	}
 	
 	private void reassignTarget() {
-		for(int i = 0; i < 100; i++) { //Make 100 target attempts
-			MapLocation candidate = rc.getLocation().add(rand.nextInt(40)-20, rand.nextInt(40)-20);
-			if(!theMap.containsKey(candidate)){
-				target = candidate;
-				return;
-			}
-		}
+		MapLocation candidate = putInMap(rc.getLocation().add(rand.nextInt(40)-20, rand.nextInt(40)-20));
+		target = candidate;
 	}
 	
 }

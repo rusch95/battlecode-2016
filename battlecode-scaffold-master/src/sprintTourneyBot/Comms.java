@@ -29,6 +29,11 @@ public class Comms {
 	public static final int SCOUT_DYING = 40; //A scout's dying hail mary
 	public static final int PARTS_FOUND = 44; //Found a parts pile
 	
+	public static final int FOUND_MINX = 45; //Found map boundaries
+	public static final int FOUND_MAXX = 46;
+	public static final int FOUND_MINY = 47;
+	public static final int FOUND_MAXY = 48;
+	
 	//Targeting messages
 	public static final int TURRET_ATTACK_HERE = 55; //For targeting outside a turret's sight radius
 	

@@ -17,12 +17,21 @@ public class Archon implements Role {
 	private RobotController rc;
 	private Random rand;
 	private final Team myTeam;
-	private String state;
-	private String nextState;
 	private MapLocation target;
 	
 	//Map information
 	private ArrayList<MapLocation> knownDens = new ArrayList<MapLocation>();
+	
+    private int minX = 0;
+    private int maxX = Integer.MAX_VALUE;
+    private int minY = 0;
+    private int maxY = Integer.MAX_VALUE;
+    
+    private boolean minXFound = false;
+    private boolean maxXFound = false;
+    private boolean minYFound = false;
+    private boolean maxYFound = false;
+	
 	
 	//Constants
 	private static final int MIGRATION_TARGET_THRESHOLD = 4;
@@ -38,13 +47,18 @@ public class Archon implements Role {
 		this.rc = rc;
 		this.rand = new Random(rc.getID());
 		this.myTeam = rc.getTeam();
+		try {
+			tryToBuild(RobotType.SCOUT);
+		} catch (Exception e) {
+            System.out.println(e.getMessage());
+            e.printStackTrace();
+    	}
 	}
 	
 	@Override
 	public void run() {
 		while(true){
 			try {
-				tryToBuild(RobotType.SCOUT);
 				
 				
 				
