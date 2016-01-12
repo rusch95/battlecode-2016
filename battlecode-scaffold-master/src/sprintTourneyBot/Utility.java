@@ -33,6 +33,27 @@ public class Utility {
 		}
 		return weakestRobot;
 	}
+	/**
+	 * Returns the RobotInfo of the robot with highest dps per health
+	 * @param robotsToSearch array of RobotInfo to search through
+	 * @return RobotInfo of robot with highest dps per health
+	 * TODO Add heuristic for targeting infected and discriminate more among weaponless targets
+	 */
+	public static RobotInfo getTarget(RobotInfo[] robotsToSearch, RobotController rc) {
+		double maxDamagePerHealth = -1;
+		RobotInfo targetRobot = null;
+		for(RobotInfo robot : robotsToSearch) {
+			//Should handle case if no attack power
+			double attackPower = (robot.attackPower > 0) ? 0 : robot.attackPower; 
+			rc.setIndicatorString(0, String.valueOf(attackPower));
+			double damagePerHealth = attackPower / robot.health;
+			if (damagePerHealth > maxDamagePerHealth) {
+				maxDamagePerHealth = damagePerHealth;
+				targetRobot = robot;
+			}
+		}
+		return targetRobot;
+	}
 	
 	/**
 	 * Returns the RobotInfo of the weakest robot in the given array OUTSIDE OF A TURRET'S MIN RANGE.
@@ -45,7 +66,7 @@ public class Utility {
 		RobotInfo weakestRobot = null;
 		for(RobotInfo robot : robotsToSearch) {
 			double weakness = robot.maxHealth - robot.health;
-			if (weakness > weakestWeakness && robot.location.distanceSquaredTo(location) > 5) { //TODO magic number
+			if (weakness > weakestWeakness && robot.location.distanceSquaredTo(location) > GameConstants.TURRET_MINIMUM_RANGE) { 
 				weakestWeakness = weakness;
 				weakestRobot = robot;
 			}
