@@ -15,7 +15,7 @@ public class Soldier implements Role {
 	private final Random rand;
     private final Team myTeam;
     private final Team otherTeam;
-    private final MapLocation startLocation;
+    private MapLocation base;
     
     //Magic Numbers
     private final int CLOSE_RANGE = 5;
@@ -29,13 +29,14 @@ public class Soldier implements Role {
 	private final int FAR_TOO_MANY = 999;
 	private final int FAR_TOO_FEW = 0;
 	private final int MIN_SQUAD_NUM = 1;
+	private final double RETREAT_HEALTH_PERCENT = 0.35;
     
 	public Soldier(RobotController rc){
 		this.rc = rc;
 		this.rand = new Random(rc.getID());
 		this.myTeam = rc.getTeam();
 		this.otherTeam = myTeam.opponent();
-		this.startLocation = rc.getLocation();
+		this.base = rc.getLocation();
 	}
 	
 	@Override
@@ -51,10 +52,21 @@ public class Soldier implements Role {
 						rc.attackLocation(targetEnemy.location);
 					}
 				}
-				if (enemiesSeen.length > 0) {
+				 //Flee code
+			    if (rc.getHealth() /rc.getType().maxHealth < RETREAT_HEALTH_PERCENT) {
+				Direction dirToGo = Direction.NONE;
+					if (Utility.chance(rand, .7)) {
+						dirToGo = rc.getLocation().directionTo(base);
+					} else if (Utility.chance(rand, .7) && enemiesWithinRange.length > 0) {
+						dirToGo = rc.getLocation().directionTo(enemiesWithinRange[0].location).opposite();
+					}
+					Utility.tryToMove(rc, dirToGo);		
+				
+			    } else if (enemiesSeen.length > 0) {
 					//Move towards enemy
 					RobotInfo closeEnemy = Utility.getClosest(enemiesSeen, rc.getLocation());
 					Utility.tryToMove(rc, rc.getLocation().directionTo(closeEnemy.location));
+					
 				} else if (friendsSeen.length > 0) {
 					
 					RobotInfo[] closeFriends = rc.senseNearbyRobots(CLOSE_RANGE, myTeam); //Magic number
@@ -67,10 +79,12 @@ public class Soldier implements Role {
 						//to assault enemies attacking team mates
 						Direction dirToGo = rc.getLocation().directionTo(weakFriend.location);
 						Utility.tryToMove(rc, dirToGo);
+						
 				    } else if (closeFriends.length > CLOSE_TOO_MANY && Utility.chance(rand, .5)) {
 						//Spread Apart if too many units adjacent
 						Direction dirToGo = Utility.getRandomDirection(rand);
 						Utility.tryToMove(rc, dirToGo);
+						
 					} else if (closeFriends.length < CLOSE_TOO_FEW && Utility.chance(rand, .5)) {
 						//Come together if med range is sparse
 						RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc.getLocation());
@@ -79,13 +93,15 @@ public class Soldier implements Role {
 							//Whether to clump or go home
 							dirToGo = rc.getLocation().directionTo(closestFriend.location);
 						} else {
-							dirToGo =  rc.getLocation().directionTo(startLocation);
+							dirToGo =  rc.getLocation().directionTo(base);
 						}
 						Utility.tryToMove(rc, dirToGo);	
+						
 					} else if (medFriends.length > MED_TOO_MANY && Utility.chance(rand, .5)) {
 						//Come together if med range is sparse
 						Direction dirToGo = Utility.getRandomDirection(rand);
 						Utility.tryToMove(rc, dirToGo);		
+						
 					} else if (medFriends.length < MED_TOO_FEW && Utility.chance(rand, .5)) {
 						//Come together if med range is sparse
 						RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc.getLocation());
@@ -94,7 +110,7 @@ public class Soldier implements Role {
 							//Whether to clump or go home
 							dirToGo = rc.getLocation().directionTo(closestFriend.location);
 						} else {
-							dirToGo =  rc.getLocation().directionTo(startLocation);
+							dirToGo =  rc.getLocation().directionTo(base);
 						}
 						Utility.tryToMove(rc, dirToGo);
 					}
