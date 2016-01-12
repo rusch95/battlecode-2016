@@ -47,7 +47,7 @@ public class Archon implements Role {
 	private int reconRequestTimeout = 0;
 	private MapLocation reconLocation;
 	
-	
+	//This is Sprint 1.0
 	public Archon(RobotController rc){
 		this.rc = rc;
 		this.rand = new Random(rc.getID());
