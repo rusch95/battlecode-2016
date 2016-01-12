@@ -232,23 +232,18 @@ public class Utility {
 		}
 	}
 	
-	public class Tuple<X, Y> {
-		public final X x;
-		public final Y y;
-		public Tuple(X x, Y y) {
-			this.x = x;
-			this.y = y;
-		}
-	}
+
 	
 	/**
-	 * Iterates through RobotInfo[] to return direction of most DPS
-	 * TODO figure out better way of returning dps and 
+	 * Determines in which direction, given a group of robots, has the most dps
+	 * TODO Make changes to the slice of area considered for dps and have it poss as a variable
 	 * @param robotsToSearch
 	 * @param rc
-	 * @return Tricky for now. Returns an array. The 
+	 * @param viewToConsider integer list such as [-1, 0, 1] that includes the offsets in the direction 
+	 * aka [0] only looks in that direction and [-4,-3,..,3,4] looks everywhere
+	 * @return Returns a tuple such that Tuple.x = direction and Tuple.y = dps of that direction 
 	 */
-	public static Direction getDirectionOfMostDPS(RobotInfo[] robotsToSearch, RobotController rc) {
+	public static Tuple<Direction, Double> getDirectionOfMostDPS(RobotInfo[] robotsToSearch, RobotController rc, int[] viewToConsider) {
 		MapLocation myLocation = rc.getLocation();
 		double[] dpsInDirection = new double[8];
 		for (RobotInfo robot : robotsToSearch) {
@@ -269,19 +264,37 @@ public class Utility {
 				default:
 			}
 		}
-		int max_index = -1;
-		double max_value = 0;
+		int maxIndex = -1;
+		double maxValue = 0;
+		int widerView[] = new int[8];
+		//Directional Offsets
 		for (int i = 0; i < 8; i++) {
-			if (dpsInDirection[i] > max_value) {
-				max_value = dpsInDirection[i];
-				max_index = i;
+			for (int offset : viewToConsider) {
+				widerView[i] += dpsInDirection[(i+offset+8)%8];
 			}
 		}
-		if (max_index == -1) {
+		for (int i = 0; i < 8; i++) {
+			if (widerView[i] > maxValue) {
+				maxValue = dpsInDirection[i];
+				maxIndex = i;
+			}
+		}
+		if (maxIndex == -1) {
 			return null;
 		} else {
-			Direction dir = directions[max_index];
-			return null;
+			Direction dir = directions[maxIndex];
+			double maxDps = dpsInDirection[maxIndex];
+			Tuple<Direction, Double> dirAndDps = new Tuple<>(dir, maxDps);
+			return dirAndDps;
+		}
+	}
+	
+	public static class Tuple<X, Y> {
+		public final X x;
+		public final Y y;
+		public Tuple(X x, Y y) {
+			this.x = x;
+			this.y = y;
 		}
 	}
 	
@@ -296,3 +309,5 @@ public class Utility {
 	}
 
 }
+
+

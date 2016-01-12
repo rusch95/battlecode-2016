@@ -26,7 +26,6 @@ public class Guard implements Role {
 	public void run() {
 		while(true){
 			try {
-				
 				RobotInfo[] enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), RobotType.GUARD.attackRadiusSquared);
 				RobotInfo[] enemiesSeen = rc.senseHostileRobots(rc.getLocation(), -1);
 				RobotInfo[] friendsSeen = rc.senseNearbyRobots(-1, myTeam);
@@ -41,30 +40,34 @@ public class Guard implements Role {
 						Utility.tryToMove(rc, rc.getLocation().directionTo(closeEnemy.location));
 				} else if (friendsSeen.length > 0) {
 					
-					int closeFriendNum = Utility.getNumOfFriendsWithinRange(friendsSeen, rc, 0, 5); //Magic number
-					int moreFriendNum = Utility.getNumOfFriendsWithinRange(friendsSeen, rc, 0, 25); //More magic
+					RobotInfo[] closeFriends = rc.senseNearbyRobots(5, myTeam); //Magic number
+					RobotInfo[] moreFriends = rc.senseNearbyRobots(15, myTeam); //More magic
 					//More Magic
-					int reallyCloseTooMany = 3;
-					int tooFewNearby = 3;
+					int reallyCloseTooMany = 2;
+					int tooFewNearby = 2;
 					int minSquadNum = 0;
 					
 					RobotInfo weakFriend = Utility.getWeakest(friendsSeen);
-					
-					if (moreFriendNum > minSquadNum && weakFriend != null && weakFriend.weaponDelay > 1) {
+					int byteCode = Clock.getBytecodeNum();
+					if (moreFriends.length > minSquadNum && weakFriend != null && weakFriend.weaponDelay > 1) {
 						//Let's see if we have enough friends nearby
 						//to assault enemies attacking team mates
 						Direction dirToGo = rc.getLocation().directionTo(weakFriend.location);
 						Utility.tryToMove(rc, dirToGo);
-					} else if (moreFriendNum > 0 && weakFriend!= null && weakFriend.weaponDelay > 1) {
+						rc.setIndicatorString(0, "First branch costs " + (Clock.getBytecodeNum() - byteCode));
+					} else if (moreFriends.length > 0 && weakFriend!= null && weakFriend.weaponDelay > 1) {
 						//Let's go regroup
 						RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc.getLocation()); 
 						Direction dirToGo = rc.getLocation().directionTo(closestFriend.location);
 						Utility.tryToMove(rc, dirToGo);	
-				    } else if (closeFriendNum > reallyCloseTooMany) {
+						rc.setIndicatorString(0, "Second branch costs " + (Clock.getBytecodeNum() - byteCode));
+				    } else if (closeFriends.length > reallyCloseTooMany) {
 						//Spread Apart if too many units adjacent
 				    	//TODO May change to modify robots seen if byte code more efficient that way
-				    	RobotInfo[] nearFriends = rc.senseNearbyRobots(15, myTeam);
-				    	Direction dirOfType = Utility.getDirectionOfType(nearFriends, RobotType.SOLDIER, rc);
+				    	Direction dirOfType = null;
+				    	RobotInfo[] nearFriends = rc.senseNearbyRobots(5, myTeam);
+				    	if (Utility.chance(rand, .1))
+				    		dirOfType = Utility.getDirectionOfType(nearFriends, RobotType.SOLDIER, rc);
 				    	Direction dirToGo = null;
 				    	if (dirOfType != null) {
 				    		dirToGo = dirOfType.opposite();
@@ -73,11 +76,13 @@ public class Guard implements Role {
 				    		dirToGo = Utility.getRandomDirection(rand);
 				    	}
 						Utility.tryToMove(rc, dirToGo);
-					} else if (tooFewNearby > closeFriendNum) {
+						rc.setIndicatorString(0, "Third branch costs " + (Clock.getBytecodeNum() - byteCode));
+					} else if (tooFewNearby > closeFriends.length) {
 						//Come together if med range is sparse
 						RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc.getLocation());
 						Direction dirToGo = rc.getLocation().directionTo(closestFriend.location);
 						Utility.tryToMove(rc, dirToGo);		
+						rc.setIndicatorString(0, "Last branch costs " + (Clock.getBytecodeNum() - byteCode));
 					}
 				}
 			} catch (Exception e) {
