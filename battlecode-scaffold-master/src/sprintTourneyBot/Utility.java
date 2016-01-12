@@ -106,6 +106,15 @@ public class Utility {
 		return closeRobot;
 	}
 	
+	public static RobotInfo getWeaponDelayed(RobotInfo[] robotsToSearch) {
+		for (RobotInfo robot : robotsToSearch) {
+			if (robot.weaponDelay > 1 && robot.type != RobotType.ARCHON){
+				return robot;
+			}
+		}
+		return null;
+	}
+	
 	/**
 	 * 
 	 * @param robotsToSearch
