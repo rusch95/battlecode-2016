@@ -31,6 +31,9 @@ public class Turret implements Role {
     private boolean minYFound = false;
     private boolean maxYFound = false;
     
+    //Constants
+    private static final int NEED_RECON_RANGE = 8;
+    
 	public Turret(RobotController rc){
 		this.rc = rc;
 		this.rand = new Random(rc.getID());
@@ -130,7 +133,7 @@ public class Turret implements Role {
 	 * @throws GameActionException 
 	 */
 	public void checkForRecon() throws GameActionException {
-		RobotInfo[] nearbyFriendlies = rc.senseNearbyRobots(7, myTeam);
+		RobotInfo[] nearbyFriendlies = rc.senseNearbyRobots(NEED_RECON_RANGE, myTeam);
 		boolean weGood = false;
 		for(RobotInfo friendly : nearbyFriendlies) {
 			if(friendly.type.equals(RobotType.SCOUT)) weGood = true;
