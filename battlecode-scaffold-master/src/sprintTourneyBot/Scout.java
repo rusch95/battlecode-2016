@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Random;
 
 import battlecode.common.Clock;
+import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
@@ -107,7 +108,10 @@ public class Scout implements Role {
 		MapLocation[] tilesNearby = MapLocation.getAllMapLocationsWithinRadiusSq(rc.getLocation(), sensorRadiusSquared);
 		
 		if(hostilesVeryNearby.length > 0) {
-			target = rc.getLocation().add(hostilesVeryNearby[0].location.directionTo(rc.getLocation()), 3);
+			Direction away = hostilesVeryNearby[0].location.directionTo(rc.getLocation());
+			if(Utility.chance(rand, 0.3)) away = away.rotateLeft();
+			else if(Utility.chance(rand, 0.3)) away = away.rotateRight();
+			target = rc.getLocation().add(away, 3);
 		}
 		
 		if(hostilesVeryNearby.length > 0 && rc.getHealth() < 15) { //HAIL MARY I'M DYING
