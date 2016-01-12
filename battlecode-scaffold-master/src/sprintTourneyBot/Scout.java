@@ -1,7 +1,6 @@
 package sprintTourneyBot;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Random;
 
 import battlecode.common.Clock;
@@ -101,21 +100,26 @@ public class Scout implements Role {
 	 */
 	private void scan() throws GameActionException {
 		RobotInfo[] hostilesNearby = rc.senseHostileRobots(rc.getLocation(), -1);
+		RobotInfo[] hostilesVeryNearby = rc.senseHostileRobots(rc.getLocation(), 15);
 		RobotInfo[] friendliesNearby = rc.senseNearbyRobots(20, myTeam);
 		
 		MapLocation[] partsNearby = rc.sensePartLocations(-1);
 		MapLocation[] tilesNearby = MapLocation.getAllMapLocationsWithinRadiusSq(rc.getLocation(), sensorRadiusSquared);
+		
+		if(hostilesVeryNearby.length > 0 && rc.getHealth() < 10) { //HAIL MARY I'M DYING
+			rc.broadcastMessageSignal(Comms.createHeader(Comms.SCOUT_DYING), 0, 100);
+		}
 		
 		scanForBounds();
 		
 		for(RobotInfo hostile : hostilesNearby) {
 			if(hostile.type.equals(RobotType.ZOMBIEDEN) && !dens.contains(hostile.location)) { //New den sighted
 				dens.add(hostile.location);
-				rc.broadcastMessageSignal(Comms.createHeader(Comms.DEN_FOUND), Comms.encodeLocation(hostile.location), 100); //TODO change the range to something smarter
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.DEN_FOUND), Comms.encodeLocation(hostile.location), broadcastDistance());
 			}
 			else if(hostile.type.equals(RobotType.ARCHON) && !enemyArchons.contains(hostile.location)) { //Enemy Archon sighted TODO: make the archon tracking smarter (by ids or something)
 				enemyArchons.add(hostile.location);
-				rc.broadcastMessageSignal(Comms.createHeader(Comms.ENEMY_ARCHON_SIGHTED), Comms.encodeLocation(hostile.location), 100); //TODO change the range to something smarter
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.ENEMY_ARCHON_SIGHTED), Comms.encodeLocation(hostile.location), broadcastDistance());
 			}
 			
 		}
@@ -138,7 +142,7 @@ public class Scout implements Role {
 				else break;
 			}
 			if(minXFound) {
-				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MINX), minX, 100); //TODO make this a better broadcast range
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MINX), minX, broadcastDistance());
 				target = putInMap(target);
 			}
 		}
@@ -152,7 +156,7 @@ public class Scout implements Role {
 				else break;
 			}
 			if(maxXFound) {
-				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MAXX), maxX, 100); //TODO make this a better broadcast range
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MAXX), maxX, broadcastDistance());
 				target = putInMap(target);
 			}
 		}
@@ -166,7 +170,7 @@ public class Scout implements Role {
 				else break;
 			}
 			if(minYFound) {
-				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MINY), minY, 100); //TODO make this a better broadcast range
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MINY), minY, broadcastDistance());
 				target = putInMap(target);
 			}
 		}
@@ -180,7 +184,7 @@ public class Scout implements Role {
 				else break;
 			}
 			if(maxYFound) {
-				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MAXY), maxY, 100); //TODO make this a better broadcast range
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MAXY), maxY, broadcastDistance());
 				target = putInMap(target);
 			}
 		}
@@ -195,6 +199,15 @@ public class Scout implements Role {
 		else if(location.y > maxY) y = maxY;
 		else y = location.y;
 		return new MapLocation(x,y);
+	}
+	
+	
+	/**
+	 * Calculates a good distance to broadcast
+	 * @return distance
+	 */
+	private int broadcastDistance() {
+		return rc.getLocation().distanceSquaredTo(birthplace)+10;
 	}
 	
 	/**
