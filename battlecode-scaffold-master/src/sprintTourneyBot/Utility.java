@@ -8,6 +8,7 @@ import battlecode.common.GameConstants;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
+import battlecode.common.RobotType;
 
 /**
  * Class full of static methods that are useful.
@@ -36,18 +37,26 @@ public class Utility {
 	/**
 	 * Returns the RobotInfo of the robot with highest dps per health
 	 * @param robotsToSearch array of RobotInfo to search through
+	 * @param minRange min range to consider
 	 * @return RobotInfo of robot with highest dps per health
 	 * TODO Add heuristic for targeting infected and discriminate more among weaponless targets
 	 */
-	public static RobotInfo getTarget(RobotInfo[] robotsToSearch, RobotController rc) {
+	public static RobotInfo getTarget(RobotInfo[] robotsToSearch, int minRange, RobotController rc) {
 		double maxDamagePerHealth = -1;
 		RobotInfo targetRobot = null;
 		for(RobotInfo robot : robotsToSearch) {
-			//Should handle case if no attack power
-			double attackPower = (robot.attackPower > 0) ? 0 : robot.attackPower; 
-			rc.setIndicatorString(0, String.valueOf(attackPower));
-			double damagePerHealth = attackPower / robot.health;
-			if (damagePerHealth > maxDamagePerHealth) {
+			//Miscellaneous factors for increasing weighting
+			double miscFactors = 1;
+			if (robot.type.equals(RobotType.VIPER))
+				miscFactors *= 5;
+			
+			double attackDelay = robot.type.attackDelay;
+			if (attackDelay <= 0)
+				attackDelay = 1;
+			
+			// TODO Change attack power to have small additions, so different small value added for 
+			double damagePerHealth = robot.attackPower / attackDelay / robot.health * miscFactors;
+			if (damagePerHealth > maxDamagePerHealth && rc.getLocation().distanceSquaredTo(robot.location) > minRange) {
 				maxDamagePerHealth = damagePerHealth;
 				targetRobot = robot;
 			}
