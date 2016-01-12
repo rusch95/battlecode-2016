@@ -3,6 +3,7 @@ package sprintTourneyBot;
 import java.util.Random;
 
 import battlecode.common.Clock;
+import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.GameConstants;
 import battlecode.common.MapLocation;
@@ -41,17 +42,41 @@ public class Turret implements Role {
 	@Override
 	public void run() {
 		while(true){
-			try {
-				targetUpdated = false;
-				handleMessages();
-				if(targetEnemy != null) rc.setIndicatorDot(targetEnemy, 250, 0, 250);
-				attack();
-				checkForRecon();
-			} catch (Exception e) {
-	            System.out.println(e.getMessage());
-	            e.printStackTrace();
-	    	}
-			Clock.yield();
+			while(rc.getType() == RobotType.TURRET) {
+				try {
+					targetUpdated = false;
+					handleMessages();
+					if(targetEnemy != null) rc.setIndicatorDot(targetEnemy, 250, 0, 250);
+					attack();
+					checkForRecon();
+					if (Utility.chance(rand, .33)) {
+						RobotInfo[] adjFriends = rc.senseNearbyRobots(10, myTeam);
+						if (Utility.getNumberOfBotOfType(adjFriends, RobotType.TURRET ) >= 7) {
+							rc.pack();
+						}
+					}
+				} catch (Exception e) {
+		            System.out.println(e.getMessage());
+		            e.printStackTrace();
+		    	}
+				Clock.yield();
+			}
+			while(rc.getType() == RobotType.TTM) {
+				try {
+					Direction dirToGo = Utility.getRandomDirection(rand);
+					Utility.tryToMove(rc, dirToGo);
+					if (Utility.chance(rand, .7)) {
+						RobotInfo[] adjFriends = rc.senseNearbyRobots(10, myTeam);
+						if (Utility.getNumberOfBotOfType(adjFriends, RobotType.TURRET ) < 7) {
+							rc.unpack();
+						}
+					}			
+				} catch (Exception e) {
+		            System.out.println(e.getMessage());
+		            e.printStackTrace();
+		    	}
+				Clock.yield();
+			}
 		}
 	}
 	//~~~~~~~~~~~~~~~~~~END MAIN LOOP~~~~~~~~~~~~~~~~~~~~~~~~

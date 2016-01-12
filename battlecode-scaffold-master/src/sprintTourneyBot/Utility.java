@@ -190,6 +190,16 @@ public class Utility {
 		return numberOf;
 	}
 	
+	public static int getNumberOfBotOfType(RobotInfo[] nearbyRobots, RobotType botType) {
+		int numberOf = 0;
+		for (RobotInfo bot : nearbyRobots) {
+			if (bot.type == botType) {
+				numberOf += 1;
+			}
+		}
+		return numberOf;
+	}
+	
 	private static final int[] directionsToTry = {0, -1, 1, -2, 2};
 	
 	/**
