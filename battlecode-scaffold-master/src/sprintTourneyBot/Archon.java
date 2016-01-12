@@ -88,7 +88,7 @@ public class Archon implements Role {
 		        
 		        
 				
-				if(scoutsKilled > 0) {
+				if(scoutsKilled > 0 && weNeedExplorers()) {
 					if(tryToBuild(RobotType.SCOUT) || Utility.chance(rand, 0.25)) scoutsKilled -= 1;
 				}
 				if (Utility.chance(rand, .25) && rc.getTeamParts() > 125) {
@@ -185,7 +185,7 @@ public class Archon implements Role {
 					}
 				}
 				else { //Basic Message
-					if(turrets.contains(id) && reconRequestTimeout == 0) { //Turret needs recon
+					if(turrets.contains(id) && reconRequestTimeout == 0 && Utility.chance(rand, 0.5)) { //Turret needs recon
 						reconRequestTimeout = 20;
 						reconRequested = true;
 						reconLocation = message.getLocation();
@@ -218,6 +218,20 @@ public class Archon implements Role {
 	        }
 		}
 		return false;
+	}
+	
+	/**
+	 * Calculates if we really need to make more scouts right now
+	 * @return true if explorers would provide much benefit at all
+	 */
+	private boolean weNeedExplorers() {
+		int sum = 0;
+		if(minXFound) sum += 1;
+		if(maxXFound) sum += 1;
+		if(minYFound) sum += 1;
+		if(maxYFound) sum += 1;
+		if(dens.size() > 2) sum += 1;
+		return (sum < 4);
 	}
 	
 	/**

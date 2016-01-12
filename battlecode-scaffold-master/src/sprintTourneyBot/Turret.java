@@ -162,9 +162,12 @@ public class Turret implements Role {
 		RobotInfo[] nearbyFriendlies = rc.senseNearbyRobots(NEED_RECON_RANGE, myTeam);
 		boolean weGood = false;
 		for(RobotInfo friendly : nearbyFriendlies) {
-			if(friendly.type.equals(RobotType.SCOUT)) weGood = true;
+			if(friendly.type.equals(RobotType.SCOUT)) {
+				weGood = true;
+				break;
+			}
 		}
-		if(!weGood) {
+		if(!weGood && rc.getRoundNum()%3 == 1) {
 			rc.broadcastSignal(25);
 		}
 	}
