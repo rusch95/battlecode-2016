@@ -6,6 +6,7 @@ import java.util.Random;
 import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
+import battlecode.common.GameConstants;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
@@ -245,10 +246,33 @@ public class Scout implements Role {
 	}
 	
 	private void findTarget() throws GameActionException {
-		RobotInfo targetEnemy = Utility.getTarget(rc.senseHostileRobots(rc.getLocation(), -1), 0, rc.getLocation());
+		RobotInfo turret = findNearestTurret();
+		RobotInfo targetEnemy = Utility.getTarget(rc.senseHostileRobots(turret.location, RobotType.TURRET.attackRadiusSquared), GameConstants.TURRET_MINIMUM_RANGE, turret.location);
 		if(targetEnemy != null) {
+			rc.setIndicatorDot(targetEnemy.location, 250, 0, 0);
 			rc.broadcastMessageSignal(Comms.createHeader(Comms.TURRET_ATTACK_HERE), Comms.encodeLocation(targetEnemy.location), 25);
 		}
+	}
+	
+	/**
+	 * Finds the nearest "reasonable" turret for recon adjustment purposes.
+	 * @return RobotInfo of nearest reasonable turret
+	 */
+	private RobotInfo findNearestTurret() {
+		RobotInfo[] friendlies = rc.senseNearbyRobots(30, myTeam);
+		RobotInfo best = null;
+		int bestDistance = Integer.MAX_VALUE;
+		MapLocation loc = rc.getLocation();
+		for(RobotInfo friendly : friendlies) {
+			if(friendly.type.equals(RobotType.TURRET)){
+				int distance = loc.distanceSquaredTo(friendly.location);
+				if(distance < bestDistance) {
+					best = friendly;
+					bestDistance = distance;
+				}
+			}
+		}
+		return best;
 	}
 	
 	private MapLocation putInMap(MapLocation location){

@@ -44,6 +44,7 @@ public class Turret implements Role {
 			try {
 				targetUpdated = false;
 				handleMessages();
+				if(targetEnemy != null) rc.setIndicatorDot(targetEnemy, 250, 0, 250);
 				attack();
 				checkForRecon();
 			} catch (Exception e) {
