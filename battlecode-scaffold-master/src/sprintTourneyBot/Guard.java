@@ -8,15 +8,14 @@ import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import battlecode.common.Team;
-import sprintTourneyBot.Utility;
 
-public class Soldier implements Role {
+public class Guard implements Role {
 	private final RobotController rc;
 	private final Random rand;
     private final Team myTeam;
     private final Team otherTeam;
     
-	public Soldier(RobotController rc){
+	public Guard(RobotController rc){
 		this.rc = rc;
 		this.rand = new Random(rc.getID());
 		this.myTeam = rc.getTeam();
@@ -27,18 +26,19 @@ public class Soldier implements Role {
 	public void run() {
 		while(true){
 			try {
-				RobotInfo[] enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), RobotType.SOLDIER.attackRadiusSquared);
+				
+				RobotInfo[] enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), RobotType.GUARD.attackRadiusSquared);
 				RobotInfo[] enemiesSeen = rc.senseHostileRobots(rc.getLocation(), -1);
 				RobotInfo[] friendsSeen = rc.senseNearbyRobots(-1, myTeam);
 				if(enemiesWithinRange.length > 0) { //We're in combat
 					RobotInfo targetEnemy = Utility.getTarget(enemiesWithinRange, 0, rc);
 					if(rc.isWeaponReady() && targetEnemy != null) {
 						rc.attackLocation(targetEnemy.location);
-					}
+					} 
 				} else if (enemiesSeen.length > 0) {
-					//Move towards enemy
-					RobotInfo closeEnemy = Utility.getClosest(enemiesSeen, rc);
-					Utility.tryToMove(rc, rc.getLocation().directionTo(closeEnemy.location));
+						//Move towards enemy
+						RobotInfo closeEnemy = Utility.getClosest(enemiesSeen, rc);
+						Utility.tryToMove(rc, rc.getLocation().directionTo(closeEnemy.location));
 				} else if (friendsSeen.length > 0) {
 					
 					int closeFriendNum = Utility.getNumOfFriendsWithinRange(friendsSeen, rc, 0, 5); //Magic number
@@ -62,9 +62,18 @@ public class Soldier implements Role {
 						Utility.tryToMove(rc, dirToGo);	
 				    } else if (closeFriendNum > reallyCloseTooMany) {
 						//Spread Apart if too many units adjacent
-						Direction dirToGo = Utility.getRandomDirection(rand);
+				    	//TODO May change to modify robots seen if byte code more efficient that way
+				    	RobotInfo[] adjFriends = rc.senseNearbyRobots(2, myTeam);
+				    	RobotInfo botOfType = Utility.getBotOfType(adjFriends, RobotType.SOLDIER, rand, rc);
+				    	Direction dirToGo = Direction.NONE;
+				    	if (botOfType != null) {
+				    		dirToGo = botOfType.location.directionTo(rc.getLocation());
+				    		// This will cause the guard to move away from soldiers
+				    	} else {
+				    		dirToGo = Utility.getRandomDirection(rand);
+				    	}
 						Utility.tryToMove(rc, dirToGo);
-					} else if (tooFewNearby > closeFriendNum && Utility.chance(rand, .5)) {
+					} else if (tooFewNearby > closeFriendNum) {
 						//Come together if med range is sparse
 						RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc);
 						Direction dirToGo = rc.getLocation().directionTo(closestFriend.location);
@@ -80,6 +89,7 @@ public class Soldier implements Role {
 	}
 	//~~~~~~~~~~~~~~~~~END MAIN LOOP~~~~~~~~~~~~~~~~~~~~
 	
+
 	
 	
 }

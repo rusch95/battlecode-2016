@@ -71,6 +71,7 @@ public class Utility {
 	 * @return robot with most missing health.
 	 */
 	public static RobotInfo getWeakestForTurret(RobotInfo[] robotsToSearch, MapLocation location) {
+		
 		double weakestWeakness = -1;
 		RobotInfo weakestRobot = null;
 		for(RobotInfo robot : robotsToSearch) {
@@ -81,6 +82,57 @@ public class Utility {
 			}
 		}
 		return weakestRobot;
+	}
+	
+	public static RobotInfo getClosest(RobotInfo[] robotsToSearch, RobotController rc) {
+		if (robotsToSearch.length == 0) {
+			return null;
+		}
+		int closest = 999999;
+		RobotInfo closeRobot = null;
+		MapLocation myLocation = rc.getLocation();
+		for (RobotInfo robot : robotsToSearch) {
+			int distance = myLocation.distanceSquaredTo(robot.location);
+			if (distance < closest) {
+				closest = distance;
+				closeRobot = robot;
+			}
+		}
+		return closeRobot;
+	}
+	
+	public static RobotInfo getBotOfType(RobotInfo[] robotsToSearch, RobotType type, Random rand, RobotController rc) {
+		if (robotsToSearch.length == 0) {
+			return null;
+		}
+		int index = rand.nextInt(robotsToSearch.length);
+		for (int i = 0; i < robotsToSearch.length; i++) {
+			if (robotsToSearch[(index + i) % robotsToSearch.length].type == type) {
+				return robotsToSearch[(index + i) % robotsToSearch.length];
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * Gives number of robots within a specified range of the robot
+	 * @param robotsToSearch
+	 * @param rc
+	 * @param min range to consider
+	 * @param max range to consider
+	 * @return number of robots within range
+	 */
+	public static int getNumOfFriendsWithinRange(RobotInfo[] robotsToSearch, RobotController rc, int min, int max) {
+		
+		MapLocation myLocation = rc.getLocation();
+		int numberOf = 0;
+		for (RobotInfo robot : robotsToSearch) {
+			int distance = myLocation.distanceSquaredTo(robot.location);
+			if (min < distance && distance < max) {
+				numberOf += 1;
+			}
+		}
+		return numberOf;
 	}
 	
 	private static final int[] directionsToTry = {0, -1, 1, -2, 2};
@@ -120,4 +172,8 @@ public class Utility {
 		return directions[rand.nextInt(8)];
 	}
 	
+	public static boolean chance(Random rand, double chance) {
+		return (rand.nextDouble() > chance);
+	}
+
 }
