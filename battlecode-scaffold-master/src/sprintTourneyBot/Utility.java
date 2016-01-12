@@ -94,7 +94,7 @@ public class Utility {
 		if (robotsToSearch.length == 0) {
 			return null;
 		}
-		int closest = 999999;
+		int closest = Integer.MAX_VALUE;
 		RobotInfo closeRobot = null;
 		for (RobotInfo robot : robotsToSearch) {
 			int distance = location.distanceSquaredTo(robot.location);
@@ -285,8 +285,14 @@ public class Utility {
 		}
 	}
 	
+	/**
+	 * Returns true with probability chance, and false with probability (1-chance)
+	 * @param rand Random generator
+	 * @param chance probability
+	 * @return probabilistic boolean
+	 */
 	public static boolean chance(Random rand, double chance) {
-		return (rand.nextDouble() < chance);
+		return (rand.nextDouble() <= chance);
 	}
 
 }
