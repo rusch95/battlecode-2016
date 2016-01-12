@@ -17,30 +17,6 @@ import battlecode.common.RobotInfo;
 public class Utility {
 	
 	/**
-	 * Encodes a Map coordinate (x,y) as a single number xxxyyy for messaging purposes.
-	 * TODO make this more bytecode-efficient
-	 * @param loc map coord
-	 * @return int representing encoded location
-	 */
-	public static int encodeLocation(MapLocation loc) {
-		int yCoordLength = String.valueOf(GameConstants.MAP_MAX_HEIGHT).length();
-		int mesg = loc.x * ( (int) Math.pow(10, yCoordLength) ) + loc.y; //Encodes as XXXX_YYYY for 4digit max height
-		return mesg;
-	}
-	
-	/**
-	 * Decodes an encoded location message.
-	 * @param message encoded
-	 * @return MapLocation corresponding to message
-	 */
-	public static MapLocation decodeLocation(int message) {
-		int yCoordLength = String.valueOf(GameConstants.MAP_MAX_HEIGHT).length();
-		int y = message % ( (int) Math.pow(10, yCoordLength) );
-		int x = (message - y) / ( (int) Math.pow(10, yCoordLength) );
-		return new MapLocation(x,y);
-	}
-	
-	/**
 	 * Returns the RobotInfo of the weakest robot in the given array.
 	 * @param robotsToSearch array of RobotInfo to search through.
 	 * @return robot with most missing health.
@@ -107,17 +83,19 @@ public class Utility {
 	 * @throws GameActionException 
 	 */
 	public static void tryToMove(RobotController rc, Direction forward) throws GameActionException {
-		for(int deltaD:directionsToTry){
-			Direction attemptDirection = Direction.values()[(forward.ordinal()+deltaD+8)%8];
-			if(rc.canMove(attemptDirection)){
-				rc.move(attemptDirection);
-				return;
+		if(rc.isCoreReady()){
+			for(int deltaD:directionsToTry){
+				Direction attemptDirection = Direction.values()[(forward.ordinal()+deltaD+8)%8];
+				if(rc.canMove(attemptDirection)){
+					rc.move(attemptDirection);
+					return;
+				}
 			}
-		}
-		//failed all attempts. Clear rubble ahead of us if we can.
-		MapLocation ahead = rc.getLocation().add(forward);
-		if(rc.senseRubble(ahead)>=GameConstants.RUBBLE_OBSTRUCTION_THRESH){
-			rc.clearRubble(forward);
+			//failed all attempts. Clear rubble ahead of us if we can.
+			MapLocation ahead = rc.getLocation().add(forward);
+			if(rc.senseRubble(ahead)>=GameConstants.RUBBLE_OBSTRUCTION_THRESH){
+				rc.clearRubble(forward);
+			}
 		}
 	}
 	

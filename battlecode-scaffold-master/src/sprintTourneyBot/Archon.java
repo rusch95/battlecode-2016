@@ -48,9 +48,6 @@ public class Archon implements Role {
 				
 				
 				
-				
-				
-				
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
 	            e.printStackTrace();
@@ -82,17 +79,19 @@ public class Archon implements Role {
 	 */
 	private void tryToBuild(RobotType typeToBuild) throws GameActionException {
         // Choose a random direction to try to build in
-        Direction dirToBuild = Utility.getRandomDirection(rand);
-        for (int i = 0; i < 8; i++) {
-            // If possible, build in this direction
-            if (rc.canBuild(dirToBuild, typeToBuild)) {
-                rc.build(dirToBuild, typeToBuild);
-                return;
-            } else {
-                // Rotate the direction to try
-                dirToBuild = dirToBuild.rotateLeft();
-            }
-        }
+		if(rc.isCoreReady()){
+	        Direction dirToBuild = Utility.getRandomDirection(rand);
+	        for (int i = 0; i < 8; i++) {
+	            // If possible, build in this direction
+	            if (rc.canBuild(dirToBuild, typeToBuild)) {
+	                rc.build(dirToBuild, typeToBuild);
+	                return;
+	            } else {
+	                // Rotate the direction to try
+	                dirToBuild = dirToBuild.rotateLeft();
+	            }
+	        }
+		}
 	}
 	
 	/**
