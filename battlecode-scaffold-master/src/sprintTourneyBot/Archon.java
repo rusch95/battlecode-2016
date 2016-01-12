@@ -18,13 +18,12 @@ public class Archon implements Role {
 	private Random rand;
 	private final Team myTeam;
 	private MapLocation target;
-	private ArrayList<MapLocation> dens = new ArrayList<>();
 	private Direction prevDirection = Direction.NONE;
 	
 	private ArrayList<Integer> turrets = new ArrayList<>();
 	
 	//Map information
-	private ArrayList<MapLocation> knownDens = new ArrayList<MapLocation>();
+	private ArrayList<MapLocation> dens = new ArrayList<>();
 	
     private int minX = 0;
     private int maxX = Integer.MAX_VALUE;
@@ -75,13 +74,14 @@ public class Archon implements Role {
 				RobotInfo[] enemies = rc.senseHostileRobots(rc.getLocation(), -1);
 				if(reconRequested) {
 					if(tryToBuild(RobotType.SCOUT)) {
-						rc.broadcastMessageSignal(Comms.createHeader(Comms.PLEASE_TARGET), Comms.encodeLocation(reconLocation), 1);
+						rc.broadcastMessageSignal(Comms.createHeader(Comms.PLEASE_TARGET), Comms.encodeLocation(reconLocation), 2);
+						reconRequestTimeout += 10;
 						reconRequested = false;
 					}
 				}
 				
 				//Heal a bitch
-				RobotInfo weakestFriend = getRobotToHeal(rc.senseNearbyRobots(rc.getType().attackRadiusSquared, rc.getTeam()));
+				RobotInfo weakestFriend = getRobotToHeal(rc.senseNearbyRobots(RobotType.ARCHON.attackRadiusSquared, rc.getTeam()));
 		        if (weakestFriend != null) {
 		        	rc.repair(weakestFriend.location);
 		        }
@@ -89,7 +89,7 @@ public class Archon implements Role {
 		        
 				
 				if(scoutsKilled > 0) {
-					if(tryToBuild(RobotType.SCOUT)) scoutsKilled -= 1;
+					if(tryToBuild(RobotType.SCOUT) || Utility.chance(rand, 0.25)) scoutsKilled -= 1;
 				}
 				if (Utility.chance(rand, .25) && rc.getTeamParts() > 125) {
 					if (Utility.chance(rand, 0.25)) {
@@ -237,16 +237,17 @@ public class Archon implements Role {
 		}
 		return bestPartsPile;
 	}
-	/*
-	 * Returns weakest healable robot
+	
+	/**
+	 * Return the weakest nearby robot to heal
+	 * @param nearbyRobots to search through
+	 * @return RobotInfo of weakest robot
 	 */
 	public static RobotInfo getRobotToHeal(RobotInfo[] nearbyRobots) {
-		//Returns weakest unit from an array of sensed robots
 		RobotInfo weakestBot = null;
 		if (nearbyRobots.length > 0) {
         	double minHealth = Double.POSITIVE_INFINITY;
         	for (RobotInfo curBot : nearbyRobots){
-        		//Iterating through to find weakest robot
         		if (curBot.health < minHealth && curBot.type != RobotType.ARCHON) {
         			minHealth = curBot.health;
         			weakestBot = curBot;
