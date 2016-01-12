@@ -81,8 +81,8 @@ public class Comms {
 	 * @param message 6-digit message header
 	 * @return 4-digit auxiliary information
 	 */
-	public static int retrieveAux(int message) {
-		return message - (message%100);
+	public static int getAux(int message) {
+		return (message - (message%100))/100;
 	}
 	
 	/**
