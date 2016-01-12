@@ -245,6 +245,10 @@ public class Scout implements Role {
 		}
 	}
 	
+	/**
+	 * Finds a target suitable for the nearest turret, and signals the turret.
+	 * @throws GameActionException
+	 */
 	private void findTarget() throws GameActionException {
 		RobotInfo turret = findNearestTurret();
 		RobotInfo targetEnemy = Utility.getTarget(rc.senseHostileRobots(turret.location, RobotType.TURRET.attackRadiusSquared), GameConstants.TURRET_MINIMUM_RANGE, turret.location);

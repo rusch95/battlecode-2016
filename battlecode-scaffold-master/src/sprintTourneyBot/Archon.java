@@ -74,7 +74,7 @@ public class Archon implements Role {
 				RobotInfo[] enemies = rc.senseHostileRobots(rc.getLocation(), -1);
 				if(reconRequested) {
 					if(tryToBuild(RobotType.SCOUT)) {
-						rc.broadcastMessageSignal(Comms.createHeader(Comms.PLEASE_TARGET), Comms.encodeLocation(reconLocation), 5);
+						rc.broadcastMessageSignal(Comms.createHeader(Comms.PLEASE_TARGET), Comms.encodeLocation(reconLocation), 1);
 						reconRequested = false;
 					}
 				}
