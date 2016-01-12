@@ -15,6 +15,7 @@ public class Soldier implements Role {
 	private final Random rand;
     private final Team myTeam;
     private final Team otherTeam;
+    private final MapLocation startLocation;
     
     //Magic Numbers
     private final int CLOSE_RANGE = 5;
@@ -34,6 +35,7 @@ public class Soldier implements Role {
 		this.rand = new Random(rc.getID());
 		this.myTeam = rc.getTeam();
 		this.otherTeam = myTeam.opponent();
+		this.startLocation = rc.getLocation();
 	}
 	
 	@Override
@@ -72,8 +74,14 @@ public class Soldier implements Role {
 					} else if (closeFriends.length < CLOSE_TOO_FEW && Utility.chance(rand, .5)) {
 						//Come together if med range is sparse
 						RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc.getLocation());
-						Direction dirToGo = rc.getLocation().directionTo(closestFriend.location);
-						Utility.tryToMove(rc, dirToGo);		
+						Direction dirToGo = null;
+						if (Utility.chance(rand, .8)) {
+							//Whether to clump or go home
+							dirToGo = rc.getLocation().directionTo(closestFriend.location);
+						} else {
+							dirToGo =  rc.getLocation().directionTo(startLocation);
+						}
+						Utility.tryToMove(rc, dirToGo);	
 					} else if (medFriends.length > MED_TOO_MANY && Utility.chance(rand, .5)) {
 						//Come together if med range is sparse
 						Direction dirToGo = Utility.getRandomDirection(rand);
@@ -81,8 +89,14 @@ public class Soldier implements Role {
 					} else if (medFriends.length < MED_TOO_FEW && Utility.chance(rand, .5)) {
 						//Come together if med range is sparse
 						RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc.getLocation());
-						Direction dirToGo = rc.getLocation().directionTo(closestFriend.location);
-						Utility.tryToMove(rc, dirToGo);	
+						Direction dirToGo = null;
+						if (Utility.chance(rand, .8)) {
+							//Whether to clump or go home
+							dirToGo = rc.getLocation().directionTo(closestFriend.location);
+						} else {
+							dirToGo =  rc.getLocation().directionTo(startLocation);
+						}
+						Utility.tryToMove(rc, dirToGo);
 					}
 				}
 			} catch (Exception e) {

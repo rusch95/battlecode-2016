@@ -78,6 +78,13 @@ public class Archon implements Role {
 						reconRequested = false;
 					}
 				}
+				
+				//Heal a bitch
+				RobotInfo weakestFriend = getRobotToHeal(rc.senseNearbyRobots(rc.getType().attackRadiusSquared, rc.getTeam()));
+		        if (weakestFriend != null) {
+		        	rc.repair(weakestFriend.location);
+		        }
+				
 				if(scoutsKilled > 0) {
 					if(tryToBuild(RobotType.SCOUT)) scoutsKilled -= 1;
 				}
@@ -226,6 +233,24 @@ public class Archon implements Role {
 			}
 		}
 		return bestPartsPile;
+	}
+	/*
+	 * Returns weakest healable robot
+	 */
+	public static RobotInfo getRobotToHeal(RobotInfo[] nearbyRobots) {
+		//Returns weakest unit from an array of sensed robots
+		RobotInfo weakestBot = null;
+		if (nearbyRobots.length > 0) {
+        	double minHealth = Double.POSITIVE_INFINITY;
+        	for (RobotInfo curBot : nearbyRobots){
+        		//Iterating through to find weakest robot
+        		if (curBot.health < minHealth && curBot.type != RobotType.ARCHON) {
+        			minHealth = curBot.health;
+        			weakestBot = curBot;
+        		}
+        	}
+		}
+		return weakestBot;
 	}
 	
 }

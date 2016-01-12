@@ -4,6 +4,7 @@ import java.util.Random;
 
 import battlecode.common.Clock;
 import battlecode.common.Direction;
+import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
@@ -14,6 +15,7 @@ public class Guard implements Role {
 	private final Random rand;
     private final Team myTeam;
     private final Team otherTeam;
+    private final MapLocation startLocation;
     
     //Magic Numbers
     private final int CLOSE_RANGE = 5;
@@ -33,6 +35,7 @@ public class Guard implements Role {
 		this.rand = new Random(rc.getID());
 		this.myTeam = rc.getTeam();
 		this.otherTeam = myTeam.opponent();
+		this.startLocation = rc.getLocation();
 	}
 	
 	@Override
@@ -84,7 +87,13 @@ public class Guard implements Role {
 					} else if (closeFriends.length < CLOSE_TOO_FEW && Utility.chance(rand, .5)) {
 						//Come together if med range is sparse
 						RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc.getLocation());
-						Direction dirToGo = rc.getLocation().directionTo(closestFriend.location);
+						Direction dirToGo = null;
+						if (Utility.chance(rand, .8)) {
+							//Whether to clump or go home
+							dirToGo = rc.getLocation().directionTo(closestFriend.location);
+						} else {
+							dirToGo =  rc.getLocation().directionTo(startLocation);
+						}
 						Utility.tryToMove(rc, dirToGo);		
 					} else if (medFriends.length > MED_TOO_MANY && Utility.chance(rand, .5)) {
 						//Come together if med range is sparse
@@ -93,7 +102,13 @@ public class Guard implements Role {
 					} else if (medFriends.length < MED_TOO_FEW && Utility.chance(rand, .5)) {
 						//Come together if med range is sparse
 						RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc.getLocation());
-						Direction dirToGo = rc.getLocation().directionTo(closestFriend.location);
+						Direction dirToGo = null;
+						if (Utility.chance(rand, .8)) {
+							//Whether to clump or go home
+							dirToGo = rc.getLocation().directionTo(closestFriend.location);
+						} else {
+							dirToGo =  rc.getLocation().directionTo(startLocation);
+						}
 						Utility.tryToMove(rc, dirToGo);	
 					}
 				}
