@@ -40,7 +40,7 @@ public class Guard implements Role {
 				RobotInfo[] enemiesSeen = rc.senseHostileRobots(rc.getLocation(), -1);
 				RobotInfo[] friendsSeen = rc.senseNearbyRobots(-1, myTeam);
 				if(enemiesWithinRange.length > 0) { //We're in combat
-					RobotInfo targetEnemy = Utility.getTarget(enemiesWithinRange, 0, rc);
+					RobotInfo targetEnemy = Utility.getTarget(enemiesWithinRange, 0, rc.getLocation());
 					if(rc.isWeaponReady() && targetEnemy != null) {
 						rc.attackLocation(targetEnemy.location);
 					} 
