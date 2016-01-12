@@ -1,5 +1,6 @@
 package sprintTourneyBot;
 
+import java.util.ArrayList;
 import java.util.Random;
 
 import battlecode.common.Direction;
@@ -304,7 +305,20 @@ public class Utility {
 		}
 	}
 	
-
+	/**
+	 * Filters an array for only robots of a certain type
+	 * @param robotsToSearch array to filter
+	 * @param filterType to filter for
+	 * @return filtered array
+	 */
+	public static RobotInfo[] filterByType(RobotInfo[] robotsToSearch, RobotType filterType) {
+		ArrayList<RobotInfo> robots = new ArrayList<RobotInfo>();
+		for(RobotInfo robot : robotsToSearch){
+			if(robot.type.equals(filterType)) robots.add(robot);
+		}
+		RobotInfo[] array = new RobotInfo[robots.size()];
+		return robots.toArray(array);
+	}
 	
 	/**
 	 * Determines in which direction, given a group of robots, has the most dps

@@ -38,19 +38,14 @@ public class Archon implements Role {
 	private int scoutsKilled = 0;
 	private ArrayList<Integer> deadScouts = new ArrayList<>();
     
+	//Scan info
+	private int nearbyBio = 0;
+	private int nearbyTurrets = 0;
+	
 	//Recon Request stuff
 	private boolean reconRequested;
 	private int reconRequestTimeout = 0;
 	private MapLocation reconLocation;
-	
-	//Constants
-	private static final int MIGRATION_TARGET_THRESHOLD = 4;
-	private static final int DEN_SEIGE_THRESHOLD = 8;
-	private static final int DEN_TOO_CLOSE_THRESHOLD = 20;
-	private static final int PARTS_TARGET_THRESHOLD = 0;
-	private static final int PANIC_THRESHOLD = 8;
-	private static final int SQUAD_RADIUS = 7;
-	private static final int MIN_SURROUNDING_TURRETS = 1;
 	
 	
 	public Archon(RobotController rc){
@@ -80,25 +75,29 @@ public class Archon implements Role {
 				}
 				
 				if (Utility.chance(rand, .25) && rc.getTeamParts() > 125) {
-					if (Utility.chance(rand, 0.25)) {
-						tryToBuild(RobotType.TURRET);
-					}
-					if (Utility.chance(rand, .5)) {
-						tryToBuild(RobotType.SOLDIER);
-					}
-					if(Utility.chance(rand, 0.5)){
+					if(nearbyBio < 3) {
 						tryToBuild(RobotType.GUARD);
+						
 					}
-					if(scoutsKilled > 0 && weNeedExplorers() && Utility.chance(rand, 0.25)) {
-						if(tryToBuild(RobotType.SCOUT) || Utility.chance(rand, 0.5)) scoutsKilled -= 1;
+					else if(nearbyBio <= nearbyTurrets) {
+						if (Utility.chance(rand, .5)) {
+							tryToBuild(RobotType.SOLDIER);
+						}
+						else{
+							tryToBuild(RobotType.GUARD);
+						}
+					}
+					else if(Utility.chance(rand, 0.5)) {
+						tryToBuild(RobotType.TURRET);
+						
+					}
+					
+					if(scoutsKilled > 0 && weNeedExplorers() && Utility.chance(rand, 0.2)) {
+						if(tryToBuild(RobotType.SCOUT)) scoutsKilled -= 1;
 					}
 				}
 				
-				//Heal a bitch
-				RobotInfo weakestFriend = getRobotToHeal(rc.senseNearbyRobots(RobotType.ARCHON.attackRadiusSquared, rc.getTeam()));
-		        if (weakestFriend != null) {
-		        	rc.repair(weakestFriend.location);
-		        }
+		        healAlly();
 				
 				RobotInfo[] enemies = rc.senseHostileRobots(rc.getLocation(), -1);
 				int[] slice = {0};
@@ -126,10 +125,18 @@ public class Archon implements Role {
 	 * Scans the sight range of the Archon for stimuli
 	 */
 	private void scanArea() {
+		nearbyTurrets = 0;
+		nearbyBio = 0;
 		RobotInfo[] friendlies = rc.senseNearbyRobots(-1, myTeam);
 		for(RobotInfo friendly : friendlies) {
-			if(friendly.type.equals(RobotType.TURRET) && !turrets.contains(friendly.ID)) {
-				turrets.add(friendly.ID);
+			if(friendly.type.equals(RobotType.TURRET) || friendly.type.equals(RobotType.TTM)) {
+				if(!turrets.contains(friendly.ID)) {
+					turrets.add(friendly.ID);
+				}
+				nearbyTurrets++;
+			}
+			else if(friendly.type.equals(RobotType.GUARD) || friendly.type.equals(RobotType.SOLDIER)) {
+				nearbyBio++;
 			}
 		}
 	}
@@ -252,22 +259,24 @@ public class Archon implements Role {
 	}
 	
 	/**
-	 * Return the weakest nearby robot to heal
-	 * @param nearbyRobots to search through
-	 * @return RobotInfo of weakest robot
+	 * Heals the weakest nearby friendly
+	 * @throws GameActionException 
 	 */
-	public static RobotInfo getRobotToHeal(RobotInfo[] nearbyRobots) {
-		RobotInfo weakestBot = null;
+	public void healAlly() throws GameActionException {
+		RobotInfo[] nearbyRobots = rc.senseNearbyRobots(RobotType.ARCHON.attackRadiusSquared, rc.getTeam());
+		RobotInfo weakestFriend = null;
 		if (nearbyRobots.length > 0) {
         	double minHealth = Double.POSITIVE_INFINITY;
         	for (RobotInfo curBot : nearbyRobots){
         		if (curBot.health < minHealth && curBot.type != RobotType.ARCHON) {
         			minHealth = curBot.health;
-        			weakestBot = curBot;
+        			weakestFriend = curBot;
         		}
         	}
 		}
-		return weakestBot;
+		if (weakestFriend != null) {
+        	rc.repair(weakestFriend.location);
+        }
 	}
 	
 }
