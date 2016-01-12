@@ -38,10 +38,10 @@ public class Utility {
 	 * Returns the RobotInfo of the robot with highest dps per health
 	 * @param robotsToSearch array of RobotInfo to search through
 	 * @param minRange min range to consider
-	 * @return RobotInfo of robot with highest dps per health
+	 * @return MapLocation location to base targeting off of
 	 * TODO Add heuristic for targeting infected and discriminate more among weaponless targets
 	 */
-	public static RobotInfo getTarget(RobotInfo[] robotsToSearch, int minRange, RobotController rc) {
+	public static RobotInfo getTarget(RobotInfo[] robotsToSearch, int minRange, MapLocation location) {
 		double maxDamagePerHealth = -1;
 		RobotInfo targetRobot = null;
 		for(RobotInfo robot : robotsToSearch) {
@@ -56,7 +56,7 @@ public class Utility {
 			
 			// TODO Change attack power to have small additions, so different small value added for 
 			double damagePerHealth = robot.attackPower / attackDelay / robot.health * miscFactors;
-			if (damagePerHealth > maxDamagePerHealth && rc.getLocation().distanceSquaredTo(robot.location) > minRange) {
+			if (damagePerHealth > maxDamagePerHealth && location.distanceSquaredTo(robot.location) > minRange) {
 				maxDamagePerHealth = damagePerHealth;
 				targetRobot = robot;
 			}

@@ -115,7 +115,7 @@ public class Turret implements Role {
 		else {
 			RobotInfo[] enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), RobotType.TURRET.attackRadiusSquared);
 			if(enemiesWithinRange.length > 0) { //We're in combat
-				RobotInfo nearTargetEnemy = Utility.getTarget(enemiesWithinRange, GameConstants.TURRET_MINIMUM_RANGE, rc);
+				RobotInfo nearTargetEnemy = Utility.getTarget(enemiesWithinRange, GameConstants.TURRET_MINIMUM_RANGE, rc.getLocation());
 				if(rc.isWeaponReady() && nearTargetEnemy != null) {
 					rc.attackLocation(nearTargetEnemy.location);
 				}
