@@ -63,11 +63,11 @@ public class Guard implements Role {
 				    } else if (closeFriendNum > reallyCloseTooMany) {
 						//Spread Apart if too many units adjacent
 				    	//TODO May change to modify robots seen if byte code more efficient that way
-				    	RobotInfo[] adjFriends = rc.senseNearbyRobots(2, myTeam);
-				    	RobotInfo botOfType = Utility.getBotOfType(adjFriends, RobotType.SOLDIER, rand, rc);
-				    	Direction dirToGo = Direction.NONE;
-				    	if (botOfType != null) {
-				    		dirToGo = botOfType.location.directionTo(rc.getLocation());
+				    	RobotInfo[] nearFriends = rc.senseNearbyRobots(15, myTeam);
+				    	Direction dirOfType = Utility.getDirectionOfType(nearFriends, RobotType.SOLDIER, rc);
+				    	Direction dirToGo = null;
+				    	if (dirOfType != null) {
+				    		dirToGo = dirOfType.opposite();
 				    		// This will cause the guard to move away from soldiers
 				    	} else {
 				    		dirToGo = Utility.getRandomDirection(rand);

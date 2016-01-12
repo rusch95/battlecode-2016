@@ -3,8 +3,10 @@ package sprintTourneyBot;
 import java.util.Random;
 
 import battlecode.common.Clock;
+import battlecode.common.GameConstants;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
+import battlecode.common.RobotType;
 import battlecode.common.Team;
 
 public class Turret implements Role {
@@ -12,6 +14,7 @@ public class Turret implements Role {
 	private final Random rand;
     private final Team myTeam;
     private final Team otherTeam;
+    
     
 	public Turret(RobotController rc){
 		this.rc = rc;
@@ -24,8 +27,13 @@ public class Turret implements Role {
 	public void run() {
 		while(true){
 			try {
-				
-				
+				RobotInfo[] enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), RobotType.TURRET.attackRadiusSquared);
+				if(enemiesWithinRange.length > 0) { //We're in combat
+					RobotInfo targetEnemy = Utility.getTarget(enemiesWithinRange, GameConstants.TURRET_MINIMUM_RANGE, rc);
+					if(rc.isWeaponReady() && targetEnemy != null) {
+						rc.attackLocation(targetEnemy.location);
+					}
+				}	
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
 	            e.printStackTrace();

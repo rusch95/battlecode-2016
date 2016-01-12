@@ -34,7 +34,7 @@ public class RobotPlayer {
 	        } else if (rc.getType() == RobotType.TURRET) {
 	        	me = new Turret(rc);
 	        } else if (rc.getType() == RobotType.GUARD) {
-	        	;;
+	        	me = new Guard(rc);
 	        } else if (rc.getType() == RobotType.SCOUT) {
 	        	me = new Scout(rc);
 	        } else if (rc.getType() == RobotType.VIPER) {

@@ -59,8 +59,14 @@ public class Archon implements Role {
 	public void run() {
 		while(true){
 			try {
-				
-				
+				RobotInfo[] enemies = rc.senseHostileRobots(rc.getLocation(), -1);
+				if (Utility.chance(rand, .25)) {
+					if (Utility.chance(rand, .5)) {
+						tryToBuild(RobotType.SOLDIER);
+					} else {
+						tryToBuild(RobotType.GUARD);
+					}
+				}
 				
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());

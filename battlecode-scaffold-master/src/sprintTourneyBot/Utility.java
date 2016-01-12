@@ -101,6 +101,14 @@ public class Utility {
 		return closeRobot;
 	}
 	
+	/**
+	 * 
+	 * @param robotsToSearch
+	 * @param type of robot to return
+	 * @param rand
+	 * @param rc
+	 * @return robot that matches type criteria from list of robots
+	 */
 	public static RobotInfo getBotOfType(RobotInfo[] robotsToSearch, RobotType type, Random rand, RobotController rc) {
 		if (robotsToSearch.length == 0) {
 			return null;
@@ -172,8 +180,108 @@ public class Utility {
 		return directions[rand.nextInt(8)];
 	}
 	
+	/**
+	 * Returns the direction with the most of a certain type of robot
+	 * @param robotsToSearch
+	 * @param type
+	 * @param rc
+	 * @return
+	 */
+	public static Direction getDirectionOfType(RobotInfo[] robotsToSearch, RobotType type, RobotController rc) {
+		MapLocation myLocation = rc.getLocation();
+		int[] numOfTypeInDirection = new int[8];
+		for (RobotInfo robot : robotsToSearch) {
+			Direction dirToRobot = myLocation.directionTo(robot.location);
+			switch (dirToRobot) {
+				case NORTH:      numOfTypeInDirection[0] += 1;  break;
+				case NORTH_EAST: numOfTypeInDirection[1] += 1;  break;
+				case EAST:       numOfTypeInDirection[2] += 1;  break;
+				case SOUTH_EAST: numOfTypeInDirection[3] += 1;  break;
+				case SOUTH:      numOfTypeInDirection[4] += 1;  break;
+				case SOUTH_WEST: numOfTypeInDirection[5] += 1;  break;
+				case WEST:       numOfTypeInDirection[6] += 1;  break;
+				case NORTH_WEST: numOfTypeInDirection[7] += 1;  break;
+				default:
+			}
+		}
+		int maxIndex = -1;
+		int maxValue = 0;
+		int widerView[] = new int[8];
+		int viewToConsider[] = {-2,-1,0,1,2};
+		//Directional Offsets
+		for (int i = 0; i < 8; i++) {
+			for (int offset : viewToConsider) {
+				widerView[i] += numOfTypeInDirection[(i+offset+8)%8];
+			}
+		}
+		for (int i = 0; i < 8; i++) {
+			if (widerView[i] > maxValue) {
+				maxValue = numOfTypeInDirection[i];
+				maxIndex = i;
+			}
+		}
+		if (maxIndex == -1) {
+			return null;
+		} else {
+			return directions[maxIndex];
+		}
+	}
+	
+	public class Tuple<X, Y> {
+		public final X x;
+		public final Y y;
+		public Tuple(X x, Y y) {
+			this.x = x;
+			this.y = y;
+		}
+	}
+	
+	/**
+	 * Iterates through RobotInfo[] to return direction of most DPS
+	 * TODO figure out better way of returning dps and 
+	 * @param robotsToSearch
+	 * @param rc
+	 * @return Tricky for now. Returns an array. The 
+	 */
+	public static Direction getDirectionOfMostDPS(RobotInfo[] robotsToSearch, RobotController rc) {
+		MapLocation myLocation = rc.getLocation();
+		double[] dpsInDirection = new double[8];
+		for (RobotInfo robot : robotsToSearch) {
+			Direction dirToRobot = myLocation.directionTo(robot.location);
+			double attackDelay = robot.type.attackDelay;
+			if (attackDelay <= 0)
+				attackDelay = 1;
+			double dps = robot.attackPower / attackDelay;
+			switch (dirToRobot) {
+				case NORTH:      dpsInDirection[0] += dps; break;
+				case NORTH_EAST: dpsInDirection[1] += dps; break;
+				case EAST:       dpsInDirection[2] += dps; break;
+				case SOUTH_EAST: dpsInDirection[3] += dps; break;
+				case SOUTH:      dpsInDirection[4] += dps; break;
+				case SOUTH_WEST: dpsInDirection[5] += dps; break;
+				case WEST:       dpsInDirection[6] += dps; break;
+				case NORTH_WEST: dpsInDirection[7] += dps; break;
+				default:
+			}
+		}
+		int max_index = -1;
+		double max_value = 0;
+		for (int i = 0; i < 8; i++) {
+			if (dpsInDirection[i] > max_value) {
+				max_value = dpsInDirection[i];
+				max_index = i;
+			}
+		}
+		if (max_index == -1) {
+			return null;
+		} else {
+			Direction dir = directions[max_index];
+			return null;
+		}
+	}
+	
 	public static boolean chance(Random rand, double chance) {
-		return (rand.nextDouble() > chance);
+		return (rand.nextDouble() < chance);
 	}
 
 }
