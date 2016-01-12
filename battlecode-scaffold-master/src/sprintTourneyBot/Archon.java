@@ -71,7 +71,6 @@ public class Archon implements Role {
 			try {
 				handleMessages();
 				scanArea();
-				RobotInfo[] enemies = rc.senseHostileRobots(rc.getLocation(), -1);
 				if(reconRequested) {
 					if(tryToBuild(RobotType.SCOUT)) {
 						rc.broadcastMessageSignal(Comms.createHeader(Comms.PLEASE_TARGET), Comms.encodeLocation(reconLocation), 2);
@@ -80,36 +79,36 @@ public class Archon implements Role {
 					}
 				}
 				
+				if (Utility.chance(rand, .25) && rc.getTeamParts() > 125) {
+					if (Utility.chance(rand, 0.25)) {
+						tryToBuild(RobotType.TURRET);
+					}
+					if (Utility.chance(rand, .5)) {
+						tryToBuild(RobotType.SOLDIER);
+					}
+					if(Utility.chance(rand, 0.5)){
+						tryToBuild(RobotType.GUARD);
+					}
+					if(scoutsKilled > 0 && weNeedExplorers() && Utility.chance(rand, 0.25)) {
+						if(tryToBuild(RobotType.SCOUT) || Utility.chance(rand, 0.5)) scoutsKilled -= 1;
+					}
+				}
+				
 				//Heal a bitch
 				RobotInfo weakestFriend = getRobotToHeal(rc.senseNearbyRobots(RobotType.ARCHON.attackRadiusSquared, rc.getTeam()));
 		        if (weakestFriend != null) {
 		        	rc.repair(weakestFriend.location);
 		        }
-		        
-		        
 				
-				if(scoutsKilled > 0 && weNeedExplorers()) {
-					if(tryToBuild(RobotType.SCOUT) || Utility.chance(rand, 0.25)) scoutsKilled -= 1;
-				}
-				if (Utility.chance(rand, .25) && rc.getTeamParts() > 125) {
-					if (Utility.chance(rand, 0.25)) {
-						tryToBuild(RobotType.TURRET);
-					}
-					else if (Utility.chance(rand, .5)) {
-						tryToBuild(RobotType.SOLDIER);
-					} else {
-						tryToBuild(RobotType.GUARD);
-					}
-				} else {
-					int[] slice = {0};
-					Utility.Tuple<Direction, Double> dpsDirTuple = Utility.getDirectionOfMostDPS(enemies, rc, slice);
-					if (dpsDirTuple != null) {
-						Direction dirDps = dpsDirTuple.x;
-						double dps = dpsDirTuple.y;
-						final double dpsThreshold = 3;
-						if (dps > dpsThreshold) {
-							prevDirection = Utility.tryToMove(rc, dirDps.opposite(), prevDirection);
-						}
+				RobotInfo[] enemies = rc.senseHostileRobots(rc.getLocation(), -1);
+				int[] slice = {0};
+				Utility.Tuple<Direction, Double> dpsDirTuple = Utility.getDirectionOfMostDPS(enemies, rc, slice);
+				if (dpsDirTuple != null) {
+					Direction dirDps = dpsDirTuple.x;
+					double dps = dpsDirTuple.y;
+					final double dpsThreshold = 3;
+					if (dps > dpsThreshold) {
+						prevDirection = Utility.tryToMove(rc, dirDps.opposite(), prevDirection);
 					}
 				}
 				
