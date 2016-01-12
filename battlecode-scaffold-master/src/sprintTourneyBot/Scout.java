@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Random;
 
 import battlecode.common.Clock;
+import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
@@ -63,7 +64,7 @@ public class Scout implements Role {
 				handleMessages();
 				if(state == EXPLORING) {
 					scan();
-					if(rc.getLocation().distanceSquaredTo(target) < 4 || rc.getRoundNum()%20 == 1) { //Magic number
+					if(rc.getLocation().distanceSquaredTo(target) < 2 || rc.getRoundNum()%20 == 1) { //Magic number
 						reassignTarget();
 					}
 					rc.setIndicatorString(1, "My X bounds are: " + String.valueOf(minX) + String.valueOf(minXFound) + " and " + String.valueOf(maxX) + String.valueOf(maxXFound));
@@ -105,6 +106,13 @@ public class Scout implements Role {
 		
 		MapLocation[] partsNearby = rc.sensePartLocations(-1);
 		MapLocation[] tilesNearby = MapLocation.getAllMapLocationsWithinRadiusSq(rc.getLocation(), sensorRadiusSquared);
+		
+		if(hostilesVeryNearby.length > 0) {
+			Direction away = hostilesVeryNearby[0].location.directionTo(rc.getLocation());
+			if(Utility.chance(rand, 0.3)) away = away.rotateLeft();
+			else if(Utility.chance(rand, 0.3)) away = away.rotateRight();
+			target = rc.getLocation().add(away, 3);
+		}
 		
 		if(hostilesVeryNearby.length > 0 && rc.getHealth() < 15) { //HAIL MARY I'M DYING
 			rc.setIndicatorString(0, "I'M DYING. HAIL MARY!!");
