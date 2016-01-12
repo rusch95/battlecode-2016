@@ -15,6 +15,7 @@ public class Viper implements Role {
 	private final Random rand;
     private final Team myTeam;
     private final Team otherTeam;
+    private Direction prevDirection = Direction.NONE;
     
     //Magic Numbers
     private final int CLOSE_RANGE = 5;
@@ -52,7 +53,7 @@ public class Viper implements Role {
 				if (enemiesSeen.length > 0) {
 					//Move towards enemy
 					RobotInfo closeEnemy = Utility.getClosest(enemiesSeen, rc.getLocation());
-					Utility.tryToMove(rc, rc.getLocation().directionTo(closeEnemy.location));
+					prevDirection=Utility.tryToMove(rc, rc.getLocation().directionTo(closeEnemy.location),prevDirection);
 				} else if (friendsSeen.length > 0) {
 					
 					RobotInfo[] closeFriends = rc.senseNearbyRobots(CLOSE_RANGE, myTeam); //Magic number
@@ -64,25 +65,25 @@ public class Viper implements Role {
 						//Let's see if we have enough friends nearby
 						//to assault enemies attacking team mates
 						Direction dirToGo = rc.getLocation().directionTo(weakFriend.location);
-						Utility.tryToMove(rc, dirToGo);
+						prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);
 				    } else if (closeFriends.length > CLOSE_TOO_MANY && Utility.chance(rand, .5)) {
 						//Spread Apart if too many units adjacent
 						Direction dirToGo = Utility.getRandomDirection(rand);
-						Utility.tryToMove(rc, dirToGo);
+						prevDirection=Utility.tryToMove(rc, dirToGo, prevDirection);
 					} else if (closeFriends.length < CLOSE_TOO_FEW && Utility.chance(rand, .5)) {
 						//Come together if med range is sparse
 						RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc.getLocation());
 						Direction dirToGo = rc.getLocation().directionTo(closestFriend.location);
-						Utility.tryToMove(rc, dirToGo);		
+						prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);		
 					} else if (medFriends.length > MED_TOO_MANY && Utility.chance(rand, .5)) {
 						//Come together if med range is sparse
 						Direction dirToGo = Utility.getRandomDirection(rand);
-						Utility.tryToMove(rc, dirToGo);		
+						prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);		
 					} else if (medFriends.length < MED_TOO_FEW && Utility.chance(rand, .5)) {
 						//Come together if med range is sparse
 						RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc.getLocation());
 						Direction dirToGo = rc.getLocation().directionTo(closestFriend.location);
-						Utility.tryToMove(rc, dirToGo);	
+						prevDirection=Utility.tryToMove(rc, dirToGo, prevDirection);	
 					}
 				}
 			} catch (Exception e) {

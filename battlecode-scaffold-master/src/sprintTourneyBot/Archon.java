@@ -19,6 +19,7 @@ public class Archon implements Role {
 	private final Team myTeam;
 	private MapLocation target;
 	private ArrayList<MapLocation> dens = new ArrayList<>();
+	private Direction prevDirection = Direction.NONE;
 	
 	private ArrayList<Integer> turrets = new ArrayList<>();
 	
@@ -84,6 +85,8 @@ public class Archon implements Role {
 		        if (weakestFriend != null) {
 		        	rc.repair(weakestFriend.location);
 		        }
+		        
+		        
 				
 				if(scoutsKilled > 0) {
 					if(tryToBuild(RobotType.SCOUT)) scoutsKilled -= 1;
@@ -105,7 +108,7 @@ public class Archon implements Role {
 						double dps = dpsDirTuple.y;
 						final double dpsThreshold = 3;
 						if (dps > dpsThreshold) {
-							Utility.tryToMove(rc, dirDps.opposite());
+							prevDirection = Utility.tryToMove(rc, dirDps.opposite(), prevDirection);
 						}
 					}
 				}

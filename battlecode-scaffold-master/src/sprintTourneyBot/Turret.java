@@ -18,6 +18,7 @@ public class Turret implements Role {
 	private final Random rand;
     private final Team myTeam;
     private final Team otherTeam;
+    private Direction prevDirection = Direction.NONE;
     
     private MapLocation targetEnemy;
     private boolean targetUpdated;
@@ -54,7 +55,7 @@ public class Turret implements Role {
 					checkForRecon();
 					if (Utility.chance(rand, .33)) {
 						RobotInfo[] adjFriends = rc.senseNearbyRobots(10, myTeam);
-						if (Utility.getNumberOfBotOfType(adjFriends, RobotType.TURRET ) >= 7) {
+						if (Utility.getNumberOfBotOfType(adjFriends, RobotType.TURRET ) >= 6) {
 							rc.pack();
 						}
 					}
@@ -67,10 +68,10 @@ public class Turret implements Role {
 			while(rc.getType() == RobotType.TTM) {
 				try {
 					Direction dirToGo = Utility.getRandomDirection(rand);
-					Utility.tryToMove(rc, dirToGo);
+					prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);
 					if (Utility.chance(rand, .7)) {
 						RobotInfo[] adjFriends = rc.senseNearbyRobots(10, myTeam);
-						if (Utility.getNumberOfBotOfType(adjFriends, RobotType.TURRET ) < 7) {
+						if (Utility.getNumberOfBotOfType(adjFriends, RobotType.TURRET ) < 6) {
 							rc.unpack();
 						}
 					}			

@@ -24,6 +24,7 @@ public class Scout implements Role {
     private final ArrayList<MapLocation> enemyArchons;
     private int state;
     private MapLocation target;
+    private Direction prevDirection = Direction.NONE;
     
     private final static int sensorRadiusSquared = RobotType.SCOUT.sensorRadiusSquared;
     private final static int sensorRadius = (int)Math.pow(sensorRadiusSquared, 0.5); //Rounded down? What does sqrt(53) even signify for range?
@@ -304,7 +305,7 @@ public class Scout implements Role {
 	 * @throws GameActionException 
 	 */
 	private void moveTowardsTarget() throws GameActionException {
-		Utility.tryToMove(rc, rc.getLocation().directionTo(target));
+		prevDirection=Utility.tryToMove(rc, rc.getLocation().directionTo(target),prevDirection);
 	}
 	
 	private void reassignTarget() {

@@ -9,6 +9,7 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
+import battlecode.common.Team;
 
 /**
  * Class full of static methods that are useful.
@@ -51,12 +52,19 @@ public class Utility {
 			if (robot.type.equals(RobotType.VIPER))
 				miscFactors *= 5;
 			
+			double fudgeFactor = 0;
+			if (robot.type == RobotType.ARCHON) {
+				fudgeFactor = .5;
+			} else if (robot.type == RobotType.SCOUT) {
+				fudgeFactor = .3;
+			}
+			
 			double attackDelay = robot.type.attackDelay;
 			if (attackDelay <= 0)
 				attackDelay = 1;
 			
 			// TODO Change attack power to have small additions, so different small value added for 
-			double damagePerHealth = robot.attackPower / attackDelay / robot.health * miscFactors;
+			double damagePerHealth = (robot.attackPower + fudgeFactor) / attackDelay / robot.health * miscFactors;
 			if (damagePerHealth > maxDamagePerHealth && location.distanceSquaredTo(robot.location) > minRange) {
 				maxDamagePerHealth = damagePerHealth;
 				targetRobot = robot;
@@ -77,19 +85,30 @@ public class Utility {
 		RobotInfo targetRobot = null;
 		for(RobotInfo robot : robotsToSearch) {
 			//Miscellaneous factors for increasing weighting
-			if (robot.viperInfectedTurns > 2) continue;
+			int uninfectedFactor = 1;
+			if (robot.viperInfectedTurns < 3) {
+				uninfectedFactor = 5;
+			}
+			double fudgeFactor = 0;
+			if (robot.type == RobotType.ARCHON) {
+				fudgeFactor = .5;
+			} else if (robot.type == RobotType.SCOUT) {
+				fudgeFactor = .3;
+			}
 			
 			double miscFactors = 1;
 			if (robot.type.equals(RobotType.VIPER))
 				miscFactors *= 5;
+			if (robot.team == Team.ZOMBIE)
+				miscFactors *= .2;
 			
 			double attackDelay = robot.type.attackDelay;
 			if (attackDelay <= 0)
 				attackDelay = 1;
 			
 			// TODO Change attack power to have small additions, so different small value added for 
-			double damagePerHealth = robot.attackPower / attackDelay / robot.health * miscFactors;
-			if (damagePerHealth > maxDamagePerHealth && location.distanceSquaredTo(robot.location) > minRange) {
+			double damagePerHealth = (robot.attackPower + fudgeFactor) / attackDelay / robot.health * miscFactors * uninfectedFactor;
+			if (damagePerHealth > maxDamagePerHealth && location.distanceSquaredTo(robot.location) >= minRange) {
 				maxDamagePerHealth = damagePerHealth;
 				targetRobot = robot;
 			}
@@ -208,21 +227,22 @@ public class Utility {
 	 * @param forward Direction to attempt movement.
 	 * @throws GameActionException 
 	 */
-	public static void tryToMove(RobotController rc, Direction forward) throws GameActionException {
+	public static Direction tryToMove(RobotController rc, Direction forward, Direction prevDirection) throws GameActionException {
 		if(rc.isCoreReady()){
 			for(int deltaD:directionsToTry){
 				Direction attemptDirection = Direction.values()[(forward.ordinal()+deltaD+8)%8];
-				if(rc.canMove(attemptDirection)){
+				if(rc.canMove(attemptDirection) && prevDirection != attemptDirection){
 					rc.move(attemptDirection);
-					return;
+					return attemptDirection.opposite();
 				}
 			}
 			//failed all attempts. Clear rubble ahead of us if we can.
 			MapLocation ahead = rc.getLocation().add(forward);
 			if(rc.senseRubble(ahead)>=GameConstants.RUBBLE_OBSTRUCTION_THRESH){
 				rc.clearRubble(forward);
-			}
+			}	
 		}
+		return Direction.NONE;
 	}
 	
 	private static final Direction[] directions = {Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, Direction.SOUTH_EAST,

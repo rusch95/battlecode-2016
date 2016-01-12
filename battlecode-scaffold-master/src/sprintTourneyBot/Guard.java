@@ -16,6 +16,7 @@ public class Guard implements Role {
     private final Team myTeam;
     private final Team otherTeam;
     private final MapLocation base;
+    private Direction prevDirection = Direction.NONE;
     
     //Magic Numbers
     private final int CLOSE_RANGE = 5;
@@ -62,12 +63,12 @@ public class Guard implements Role {
 					} else if (Utility.chance(rand, .7) && enemiesWithinRange.length > 0) {
 						dirToGo = rc.getLocation().directionTo(enemiesWithinRange[0].location).opposite();
 					}
-				Utility.tryToMove(rc, dirToGo);
+				prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
 				
 			    } else if (enemiesSeen.length > 0) {
 						//Move towards enemy
 						RobotInfo closeEnemy = Utility.getClosest(enemiesSeen, rc.getLocation());
-						Utility.tryToMove(rc, rc.getLocation().directionTo(closeEnemy.location));
+						prevDirection = Utility.tryToMove(rc, rc.getLocation().directionTo(closeEnemy.location), prevDirection);
 				} else if (friendsSeen.length > 0) {
 					
 					RobotInfo[] closeFriends = rc.senseNearbyRobots(CLOSE_RANGE, myTeam); //Magic number
@@ -79,7 +80,7 @@ public class Guard implements Role {
 						//Let's see if we have enough friends nearby
 						//to assault enemies attacking team mates
 						Direction dirToGo = rc.getLocation().directionTo(weakFriend.location);
-						Utility.tryToMove(rc, dirToGo);
+						prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
 						rc.setIndicatorString(0, "First branch costs " + (Clock.getBytecodeNum() - byteCode));
 						
 					} else if (rc.getType().maxHealth / rc.getHealth() < RETREAT_HEALTH_PERCENT) {
@@ -89,7 +90,7 @@ public class Guard implements Role {
 						} else if (Utility.chance(rand, .7) && enemiesWithinRange.length > 0) {
 							dirToGo = rc.getLocation().directionTo(enemiesWithinRange[0].location).opposite();
 						}
-						Utility.tryToMove(rc, dirToGo);
+						prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
 						
 				    } else if (closeFriends.length > CLOSE_TOO_MANY) {
 						//Spread Apart if too many units adjacent
@@ -105,7 +106,7 @@ public class Guard implements Role {
 				    	} else {
 				    		dirToGo = Utility.getRandomDirection(rand);
 				    	}
-						Utility.tryToMove(rc, dirToGo);
+				    	prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
 						rc.setIndicatorString(0, "Third branch costs " + (Clock.getBytecodeNum() - byteCode));
 						
 					} else if (closeFriends.length < CLOSE_TOO_FEW && Utility.chance(rand, .5)) {
@@ -118,11 +119,11 @@ public class Guard implements Role {
 						} else {
 							dirToGo =  rc.getLocation().directionTo(base);
 						}
-						Utility.tryToMove(rc, dirToGo);		
+						prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);		
 					} else if (medFriends.length > MED_TOO_MANY && Utility.chance(rand, .5)) {
 						//Come together if med range is sparse
 						Direction dirToGo = Utility.getRandomDirection(rand);
-						Utility.tryToMove(rc, dirToGo);
+						prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
 						
 					} else if (medFriends.length < MED_TOO_FEW && Utility.chance(rand, .5)) {
 						//Come together if med range is sparse
@@ -134,7 +135,7 @@ public class Guard implements Role {
 						} else {
 							dirToGo =  rc.getLocation().directionTo(base);
 						}
-						Utility.tryToMove(rc, dirToGo);	
+						prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);	
 					}
 				}
 			} catch (Exception e) {
