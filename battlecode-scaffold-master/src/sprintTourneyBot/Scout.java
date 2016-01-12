@@ -67,15 +67,15 @@ public class Scout implements Role {
 					if(rc.getLocation().distanceSquaredTo(target) < 2 || rc.getRoundNum()%20 == 1) { //Magic number
 						reassignTarget();
 					}
-					rc.setIndicatorString(1, "My X bounds are: " + String.valueOf(minX) + String.valueOf(minXFound) + " and " + String.valueOf(maxX) + String.valueOf(maxXFound));
-					rc.setIndicatorString(2, "My Y bounds are: " + String.valueOf(minY) + String.valueOf(minYFound) + " and " + String.valueOf(maxY) + String.valueOf(maxYFound));
-					rc.setIndicatorDot(target, 250, 0, 0);
 					moveTowardsTarget();
 				}
 				else if(state == BAITING) {
 					
 				}
 				else if(state == TARGETING) {
+					if(rc.getLocation().distanceSquaredTo(target) < 2) {
+						moveTowardsTarget();
+					}
 					findTarget(); //The sooner we do this, the more likely they won't have moved yet. ??
 					handleMessages();
 				}
@@ -105,6 +105,7 @@ public class Scout implements Role {
 					switch (code){
 						case Comms.PLEASE_TARGET:
 							state = TARGETING;
+							target = loc;
 							break;
 						case Comms.DEN_FOUND:
 							if(!dens.contains(loc)) dens.add(loc);
@@ -244,10 +245,9 @@ public class Scout implements Role {
 	}
 	
 	private void findTarget() throws GameActionException {
-		RobotInfo target = Utility.getTarget(rc.senseHostileRobots(rc.getLocation(), -1), 0, rc.getLocation());
-		if(target != null) {
-			rc.setIndicatorDot(target.location, 250, 0, 0);
-			rc.broadcastMessageSignal(Comms.createHeader(Comms.TURRET_ATTACK_HERE), Comms.encodeLocation(target.location), 25);
+		RobotInfo targetEnemy = Utility.getTarget(rc.senseHostileRobots(rc.getLocation(), -1), 0, rc.getLocation());
+		if(targetEnemy != null) {
+			rc.broadcastMessageSignal(Comms.createHeader(Comms.TURRET_ATTACK_HERE), Comms.encodeLocation(targetEnemy.location), 25);
 		}
 	}
 	

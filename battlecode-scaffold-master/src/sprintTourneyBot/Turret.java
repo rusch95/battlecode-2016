@@ -44,8 +44,8 @@ public class Turret implements Role {
 			try {
 				targetUpdated = false;
 				handleMessages();
-				if(targetEnemy != null) rc.setIndicatorDot(targetEnemy, 0, 250, 0);
 				attack();
+				checkForRecon();
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
 	            e.printStackTrace();
@@ -124,6 +124,19 @@ public class Turret implements Role {
 		}
 	}
 	
-	
+	/**
+	 * Checks for available recon, and requests if necessary.
+	 * @throws GameActionException 
+	 */
+	public void checkForRecon() throws GameActionException {
+		RobotInfo[] nearbyFriendlies = rc.senseNearbyRobots(7, myTeam);
+		boolean weGood = false;
+		for(RobotInfo friendly : nearbyFriendlies) {
+			if(friendly.type.equals(RobotType.SCOUT)) weGood = true;
+		}
+		if(!weGood) {
+			rc.broadcastSignal(25);
+		}
+	}
 	
 }

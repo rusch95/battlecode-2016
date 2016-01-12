@@ -20,6 +20,8 @@ public class Archon implements Role {
 	private MapLocation target;
 	private ArrayList<MapLocation> dens = new ArrayList<>();
 	
+	private ArrayList<Integer> turrets = new ArrayList<>();
+	
 	//Map information
 	private ArrayList<MapLocation> knownDens = new ArrayList<MapLocation>();
 	
@@ -36,6 +38,11 @@ public class Archon implements Role {
 	private int scoutsKilled = 0;
 	private ArrayList<Integer> deadScouts = new ArrayList<>();
     
+	//Recon Request stuff
+	private boolean reconRequested;
+	private int reconRequestTimeout = 0;
+	private MapLocation reconLocation;
+	
 	//Constants
 	private static final int MIGRATION_TARGET_THRESHOLD = 4;
 	private static final int DEN_SEIGE_THRESHOLD = 8;
@@ -63,32 +70,27 @@ public class Archon implements Role {
 		while(true){
 			try {
 				handleMessages();
-				if(Utility.chance(rand, 0.25)) {
-					if(Utility.chance(rand, 0.85)) tryToBuild(RobotType.TURRET);
-					else {
-						tryToBuild(RobotType.SCOUT);
-						rc.broadcastMessageSignal(Comms.createHeader(Comms.PLEASE_TARGET), 0, 10);
+				scanArea();
+				RobotInfo[] enemies = rc.senseHostileRobots(rc.getLocation(), -1);
+				if(reconRequested) {
+					if(tryToBuild(RobotType.SCOUT)) {
+						rc.broadcastMessageSignal(Comms.createHeader(Comms.PLEASE_TARGET), Comms.encodeLocation(reconLocation), 5);
+						reconRequested = false;
 					}
 				}
-				
-				
-				
-				/*
-				rc.setIndicatorString(0, "Scouts needed: " + String.valueOf(scoutsKilled));
-				RobotInfo[] enemies = rc.senseHostileRobots(rc.getLocation(), -1);
-				rc.setIndicatorString(1, "My X bounds are: " + String.valueOf(minX) + String.valueOf(minXFound) + " and " + String.valueOf(maxX) + String.valueOf(maxXFound));
-				rc.setIndicatorString(2, "My Y bounds are: " + String.valueOf(minY) + String.valueOf(minYFound) + " and " + String.valueOf(maxY) + String.valueOf(maxYFound));
 				if(scoutsKilled > 0) {
 					if(tryToBuild(RobotType.SCOUT)) scoutsKilled -= 1;
 				}
-				if (Utility.chance(rand, .25) && rc.getTeamParts() > 50) {
-					if (Utility.chance(rand, .5)) {
+				if (Utility.chance(rand, .25) && rc.getTeamParts() > 125) {
+					if (Utility.chance(rand, 0.25)) {
+						tryToBuild(RobotType.TURRET);
+					}
+					else if (Utility.chance(rand, .5)) {
 						tryToBuild(RobotType.SOLDIER);
 					} else {
 						tryToBuild(RobotType.GUARD);
 					}
 				} else {
-					rc.setIndicatorString(0,"                                 ");
 					int[] slice = {0};
 					Utility.Tuple<Direction, Double> dpsDirTuple = Utility.getDirectionOfMostDPS(enemies, rc, slice);
 					if (dpsDirTuple != null) {
@@ -96,12 +98,10 @@ public class Archon implements Role {
 						double dps = dpsDirTuple.y;
 						final double dpsThreshold = 3;
 						if (dps > dpsThreshold) {
-							rc.setIndicatorString(0,String.valueOf(dirDps.opposite()) +" "+ dps);
 							Utility.tryToMove(rc, dirDps.opposite());
 						}
 					}
 				}
-				*/
 				
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
@@ -117,7 +117,12 @@ public class Archon implements Role {
 	 * Scans the sight range of the Archon for stimuli
 	 */
 	private void scanArea() {
-		
+		RobotInfo[] friendlies = rc.senseNearbyRobots(-1, myTeam);
+		for(RobotInfo friendly : friendlies) {
+			if(friendly.type.equals(RobotType.TURRET) && !turrets.contains(friendly.ID)) {
+				turrets.add(friendly.ID);
+			}
+		}
 	}
 	
 	/**
@@ -128,8 +133,8 @@ public class Archon implements Role {
 		for(Signal message : messages) {
 			if(message.getTeam().equals(myTeam)){ //Friendly message
 				int[] contents = message.getMessage();
+				int id = message.getID();
 				if(contents != null) { //Not a basic signal
-					int id = message.getID();
 					int code = Comms.getMessageCode(contents[0]);
 					int aux = Comms.getAux(contents[0]);
 					MapLocation loc = Comms.decodeLocation(contents[1]);
@@ -167,13 +172,18 @@ public class Archon implements Role {
 								deadScouts.add(id);
 							}
 							break;
-						
-						
-						
+					}
+				}
+				else { //Basic Message
+					if(turrets.contains(id) && reconRequestTimeout == 0) { //Turret needs recon
+						reconRequestTimeout = 20;
+						reconRequested = true;
+						reconLocation = message.getLocation();
 					}
 				}
 			}
 		}
+		if(reconRequestTimeout > 0) reconRequestTimeout -= 1;
 	}
 	
 	/**
