@@ -63,6 +63,17 @@ public class Archon implements Role {
 		while(true){
 			try {
 				handleMessages();
+				if(Utility.chance(rand, 0.25)) {
+					if(Utility.chance(rand, 0.85)) tryToBuild(RobotType.TURRET);
+					else {
+						tryToBuild(RobotType.SCOUT);
+						rc.broadcastMessageSignal(Comms.createHeader(Comms.PLEASE_TARGET), 0, 10);
+					}
+				}
+				
+				
+				
+				/*
 				rc.setIndicatorString(0, "Scouts needed: " + String.valueOf(scoutsKilled));
 				RobotInfo[] enemies = rc.senseHostileRobots(rc.getLocation(), -1);
 				rc.setIndicatorString(1, "My X bounds are: " + String.valueOf(minX) + String.valueOf(minXFound) + " and " + String.valueOf(maxX) + String.valueOf(maxXFound));
@@ -90,6 +101,7 @@ public class Archon implements Role {
 						}
 					}
 				}
+				*/
 				
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
