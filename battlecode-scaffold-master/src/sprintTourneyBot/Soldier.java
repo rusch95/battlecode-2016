@@ -37,7 +37,7 @@ public class Soldier implements Role {
 					}
 				} else if (enemiesSeen.length > 0) {
 					//Move towards enemy
-					RobotInfo closeEnemy = Utility.getClosest(enemiesSeen, rc);
+					RobotInfo closeEnemy = Utility.getClosest(enemiesSeen, rc.getLocation());
 					Utility.tryToMove(rc, rc.getLocation().directionTo(closeEnemy.location));
 				} else if (friendsSeen.length > 0) {
 					
@@ -57,7 +57,7 @@ public class Soldier implements Role {
 						Utility.tryToMove(rc, dirToGo);
 					} else if (moreFriendNum > 0 && weakFriend!= null && weakFriend.weaponDelay > 1) {
 						//Let's go regroup
-						RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc); 
+						RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc.getLocation()); 
 						Direction dirToGo = rc.getLocation().directionTo(closestFriend.location);
 						Utility.tryToMove(rc, dirToGo);	
 				    } else if (closeFriendNum > reallyCloseTooMany) {
@@ -66,7 +66,7 @@ public class Soldier implements Role {
 						Utility.tryToMove(rc, dirToGo);
 					} else if (tooFewNearby > closeFriendNum && Utility.chance(rand, .5)) {
 						//Come together if med range is sparse
-						RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc);
+						RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc.getLocation());
 						Direction dirToGo = rc.getLocation().directionTo(closestFriend.location);
 						Utility.tryToMove(rc, dirToGo);		
 					}

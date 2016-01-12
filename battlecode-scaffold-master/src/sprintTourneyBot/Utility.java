@@ -84,15 +84,20 @@ public class Utility {
 		return weakestRobot;
 	}
 	
-	public static RobotInfo getClosest(RobotInfo[] robotsToSearch, RobotController rc) {
+	/**
+	 * Returns the closest robot in proximity to the given location.
+	 * @param robotsToSearch array of robots to search through
+	 * @param location epicenter of proximity
+	 * @return RobotInfo of closest robot
+	 */
+	public static RobotInfo getClosest(RobotInfo[] robotsToSearch, MapLocation location) {
 		if (robotsToSearch.length == 0) {
 			return null;
 		}
 		int closest = 999999;
 		RobotInfo closeRobot = null;
-		MapLocation myLocation = rc.getLocation();
 		for (RobotInfo robot : robotsToSearch) {
-			int distance = myLocation.distanceSquaredTo(robot.location);
+			int distance = location.distanceSquaredTo(robot.location);
 			if (distance < closest) {
 				closest = distance;
 				closeRobot = robot;
