@@ -38,6 +38,7 @@ public class Utility {
 	 * Returns the RobotInfo of the robot with highest dps per health
 	 * @param robotsToSearch array of RobotInfo to search through
 	 * @param minRange min range to consider
+	 * @param location location to search from
 	 * @return MapLocation location to base targeting off of
 	 * TODO Add heuristic for targeting infected and discriminate more among weaponless targets
 	 */
