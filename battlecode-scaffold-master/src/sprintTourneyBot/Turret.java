@@ -44,6 +44,7 @@ public class Turret implements Role {
 			try {
 				targetUpdated = false;
 				handleMessages();
+				if(targetEnemy != null) rc.setIndicatorDot(targetEnemy, 0, 250, 0);
 				attack();
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
@@ -109,7 +110,7 @@ public class Turret implements Role {
 	 * @throws GameActionException
 	 */
 	public void attack() throws GameActionException {
-		if(targetUpdated && rc.isWeaponReady()) { //Snipe sighted
+		if(targetUpdated && rc.isWeaponReady() && rc.canAttackLocation(targetEnemy)) { //Snipe sighted
 			rc.attackLocation(targetEnemy);
 		}
 		else {

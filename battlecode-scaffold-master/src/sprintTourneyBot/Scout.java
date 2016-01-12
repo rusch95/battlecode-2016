@@ -10,6 +10,7 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
+import battlecode.common.Signal;
 import battlecode.common.Team;
 
 public class Scout implements Role {
@@ -20,7 +21,7 @@ public class Scout implements Role {
     private final MapLocation birthplace;
     private final ArrayList<MapLocation> dens;
     private final ArrayList<MapLocation> enemyArchons;
-    private final int state;
+    private int state;
     private MapLocation target;
     
     private final static int sensorRadiusSquared = RobotType.SCOUT.sensorRadiusSquared;
@@ -60,9 +61,8 @@ public class Scout implements Role {
 	public void run() {
 		while(true){
 			try {
-				int fate = rand.nextInt(1000);
-				handleMessages();
 				if(state == EXPLORING) {
+					handleMessages();
 					scan();
 					if(rc.getLocation().distanceSquaredTo(target) < 2 || rc.getRoundNum()%20 == 1) { //Magic number
 						reassignTarget();
@@ -76,7 +76,8 @@ public class Scout implements Role {
 					
 				}
 				else if(state == TARGETING) {
-					
+					findTarget(); //The sooner we do this, the more likely they won't have moved yet. ??
+					handleMessages();
 				}
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
@@ -92,7 +93,50 @@ public class Scout implements Role {
 	 * Handles the message queue for this bot
 	 */
 	private void handleMessages() {
-		;;
+		Signal[] messages = rc.emptySignalQueue();
+		for(Signal message : messages) {
+			if(message.getTeam().equals(myTeam)){ //Friendly message
+				int[] contents = message.getMessage();
+				if(contents != null) { //Not a basic signal
+					int id = message.getID();
+					int code = Comms.getMessageCode(contents[0]);
+					int aux = Comms.getAux(contents[0]);
+					MapLocation loc = Comms.decodeLocation(contents[1]);
+					switch (code){
+						case Comms.PLEASE_TARGET:
+							state = TARGETING;
+							break;
+						case Comms.DEN_FOUND:
+							if(!dens.contains(loc)) dens.add(loc);
+							break;
+						case Comms.FOUND_MINX:
+							if(!minXFound) {
+								minX = aux;
+								minXFound = true;
+							}
+							break;
+						case Comms.FOUND_MAXX:
+							if(!maxXFound) {
+								maxX = aux;
+								maxXFound = true;
+							}
+							break;
+						case Comms.FOUND_MINY:
+							if(!minYFound) {
+								minY = aux;
+								minYFound = true;
+							}
+							break;
+						case Comms.FOUND_MAXY:
+							if(!maxYFound) {
+								maxY = aux;
+								maxYFound = true;
+							}
+							break;
+					}
+				}
+			}
+		}
 	}
 	
 	/**
@@ -196,6 +240,14 @@ public class Scout implements Role {
 				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MAXY, maxY), 0, broadcastDistance());
 				target = putInMap(target);
 			}
+		}
+	}
+	
+	private void findTarget() throws GameActionException {
+		RobotInfo target = Utility.getTarget(rc.senseHostileRobots(rc.getLocation(), -1), 0, rc.getLocation());
+		if(target != null) {
+			rc.setIndicatorDot(target.location, 250, 0, 0);
+			rc.broadcastMessageSignal(Comms.createHeader(Comms.TURRET_ATTACK_HERE), Comms.encodeLocation(target.location), 25);
 		}
 	}
 	
