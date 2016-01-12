@@ -66,9 +66,13 @@ public class NonTurretDerp implements Task {
         	int x = signalQueue[0].getMessage()[0];
         	int y = signalQueue[0].getMessage()[1];
         	MapLocation gotoLoc = new MapLocation(x,y);
-        	dirToMove = rc.getLocation().directionTo(gotoLoc); 
+        	dirToMove = rc.getLocation().directionTo(gotoLoc);
+        	spotArchon = gotoLoc;
         	
-        } else {
+        } else if (spotArchon !=  null) {
+        	dirToMove = rc.getLocation().directionTo(spotArchon); 
+        	helperMeth.tryToMove(dirToMove, rc);
+		} else {
         	RobotInfo[] friendsSeen = rc.senseNearbyRobots(-1, rc.getTeam());
         	RobotInfo weakestFriend = helperMeth.getWeakestRobot(friendsSeen);
         	if (weakestFriend != null) {

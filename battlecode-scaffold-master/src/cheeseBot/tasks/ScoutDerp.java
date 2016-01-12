@@ -63,7 +63,7 @@ public class ScoutDerp implements Task {
         	for (RobotInfo e : nearby) {
         		if (e.type == RobotType.ARCHON  && e.team == enemyTeam || e.type == RobotType.ZOMBIEDEN) {
         			spotArchon = e.location;
-        			rc.broadcastMessageSignal(spotArchon.x, spotArchon.y, 3000);
+        			rc.broadcastMessageSignal(spotArchon.x, spotArchon.y, 100000);
         		seenEnemies.add(e.ID);
         		} //else if (e.type == RobotType.ZOMBIEDEN) {
         		//	spotArchon = e.location;

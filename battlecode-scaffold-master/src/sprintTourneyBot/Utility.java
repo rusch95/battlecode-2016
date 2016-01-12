@@ -65,6 +65,38 @@ public class Utility {
 	}
 	
 	/**
+	 * Returns the RobotInfo of the robot with highest dps per health that isn't already infected
+	 * @param robotsToSearch array of RobotInfo to search through
+	 * @param minRange min range to consider
+	 * @return MapLocation location to base targeting off of
+	 * TODO Add heuristic for targeting infected and discriminate more among weaponless targets
+	 */
+	public static RobotInfo getViperTarget(RobotInfo[] robotsToSearch, int minRange, MapLocation location) {
+		double maxDamagePerHealth = -1;
+		RobotInfo targetRobot = null;
+		for(RobotInfo robot : robotsToSearch) {
+			//Miscellaneous factors for increasing weighting
+			if (robot.viperInfectedTurns > 2) continue;
+			
+			double miscFactors = 1;
+			if (robot.type.equals(RobotType.VIPER))
+				miscFactors *= 5;
+			
+			double attackDelay = robot.type.attackDelay;
+			if (attackDelay <= 0)
+				attackDelay = 1;
+			
+			// TODO Change attack power to have small additions, so different small value added for 
+			double damagePerHealth = robot.attackPower / attackDelay / robot.health * miscFactors;
+			if (damagePerHealth > maxDamagePerHealth && location.distanceSquaredTo(robot.location) > minRange) {
+				maxDamagePerHealth = damagePerHealth;
+				targetRobot = robot;
+			}
+		}
+		return targetRobot;
+	}
+	
+	/**
 	 * Returns the RobotInfo of the weakest robot in the given array OUTSIDE OF A TURRET'S MIN RANGE.
 	 * @param robotsToSearch array of RobotInfo to search through.
 	 * @param location of the Turret
