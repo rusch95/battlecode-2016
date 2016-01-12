@@ -44,7 +44,7 @@ public class Archon implements Role {
 	public void run() {
 		while(true){
 			try {
-				
+				tryToBuild(RobotType.SCOUT);
 				
 				
 				
