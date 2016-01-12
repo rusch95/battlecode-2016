@@ -106,8 +106,9 @@ public class Scout implements Role {
 		MapLocation[] partsNearby = rc.sensePartLocations(-1);
 		MapLocation[] tilesNearby = MapLocation.getAllMapLocationsWithinRadiusSq(rc.getLocation(), sensorRadiusSquared);
 		
-		if(hostilesVeryNearby.length > 0 && rc.getHealth() < 10) { //HAIL MARY I'M DYING
-			rc.broadcastMessageSignal(Comms.createHeader(Comms.SCOUT_DYING), 0, 100);
+		if(hostilesVeryNearby.length > 0 && rc.getHealth() < 15) { //HAIL MARY I'M DYING
+			rc.setIndicatorString(0, "I'M DYING. HAIL MARY!!");
+			rc.broadcastMessageSignal(Comms.createHeader(Comms.SCOUT_DYING), 0, 100000000);
 		}
 		
 		scanForBounds();
@@ -142,7 +143,7 @@ public class Scout implements Role {
 				else break;
 			}
 			if(minXFound) {
-				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MINX), minX, broadcastDistance());
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MINX, minX), 0, broadcastDistance());
 				target = putInMap(target);
 			}
 		}
@@ -156,7 +157,7 @@ public class Scout implements Role {
 				else break;
 			}
 			if(maxXFound) {
-				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MAXX), maxX, broadcastDistance());
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MAXX, maxX), 0, broadcastDistance());
 				target = putInMap(target);
 			}
 		}
@@ -170,7 +171,7 @@ public class Scout implements Role {
 				else break;
 			}
 			if(minYFound) {
-				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MINY), minY, broadcastDistance());
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MINY, minY), 0, broadcastDistance());
 				target = putInMap(target);
 			}
 		}
@@ -184,7 +185,7 @@ public class Scout implements Role {
 				else break;
 			}
 			if(maxYFound) {
-				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MAXY), maxY, broadcastDistance());
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MAXY, maxY), 0, broadcastDistance());
 				target = putInMap(target);
 			}
 		}
