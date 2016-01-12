@@ -15,6 +15,16 @@ public class Guard implements Role {
     private final Team myTeam;
     private final Team otherTeam;
     
+    //Magic Numbers
+    private final int closeRange = 5;
+    private final int medRange = 15;
+    private final int farRange = 25;
+    private final int maxRange = -1;
+	private final int closeTooManyThreshold = 2;
+	private final int closeTooFewThreshold = 2;
+	private final int medTooManyThreshold = 0;
+	private final int medTooFewThreshold = 4;
+    
 	public Guard(RobotController rc){
 		this.rc = rc;
 		this.rand = new Random(rc.getID());
@@ -40,12 +50,8 @@ public class Guard implements Role {
 						Utility.tryToMove(rc, rc.getLocation().directionTo(closeEnemy.location));
 				} else if (friendsSeen.length > 0) {
 					
-					RobotInfo[] closeFriends = rc.senseNearbyRobots(5, myTeam); //Magic number
-					RobotInfo[] moreFriends = rc.senseNearbyRobots(15, myTeam); //More magic
-					//More Magic
-					int reallyCloseTooMany = 2;
-					int tooFewNearby = 2;
-					int minSquadNum = 0;
+					RobotInfo[] closeFriends = rc.senseNearbyRobots(closeRange, myTeam); //Magic number
+					RobotInfo[] moreFriends = rc.senseNearbyRobots(medRange, myTeam); //More magic
 					
 					RobotInfo weakFriend = Utility.getWeakest(friendsSeen);
 					int byteCode = Clock.getBytecodeNum();
