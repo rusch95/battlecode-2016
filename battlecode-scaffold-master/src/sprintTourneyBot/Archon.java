@@ -66,6 +66,19 @@ public class Archon implements Role {
 					} else {
 						tryToBuild(RobotType.GUARD);
 					}
+				} else {
+					rc.setIndicatorString(0,"                                 ");
+					int[] slice = {-2, -1, 0, 1, 2};
+					Utility.Tuple<Direction, Double> dpsDirTuple = Utility.getDirectionOfMostDPS(enemies, rc, slice);
+					if (dpsDirTuple != null) {
+						Direction dirDps = dpsDirTuple.x;
+						double dps = dpsDirTuple.y;
+						final double dpsThreshold = 0;
+						if (dps > dpsThreshold) {
+							rc.setIndicatorString(0,String.valueOf(dirDps.opposite()) +" "+ dps);
+							Utility.tryToMove(rc, dirDps.opposite());
+						}
+					}
 				}
 				
 			} catch (Exception e) {
