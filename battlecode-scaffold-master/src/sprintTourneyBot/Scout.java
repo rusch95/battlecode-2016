@@ -62,8 +62,10 @@ public class Scout implements Role {
 	public void run() {
 		while(true){
 			try {
+				rc.setIndicatorDot(target, 0, 150, 0);
+				handleMessages();
 				if(state == EXPLORING) {
-					handleMessages();
+					rc.setIndicatorString(0, "I am EXPLORING");
 					scan();
 					if(rc.getLocation().distanceSquaredTo(target) < 2 || rc.getRoundNum()%20 == 1) { //Magic number
 						reassignTarget();
@@ -74,11 +76,11 @@ public class Scout implements Role {
 					
 				}
 				else if(state == TARGETING) {
-					if(rc.getLocation().distanceSquaredTo(target) < 2) {
+					rc.setIndicatorString(0, "I am TARGETING");
+					if(rc.getLocation().distanceSquaredTo(target) > 2) {
 						moveTowardsTarget();
 					}
 					findTarget(); //The sooner we do this, the more likely they won't have moved yet. ??
-					handleMessages();
 				}
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
