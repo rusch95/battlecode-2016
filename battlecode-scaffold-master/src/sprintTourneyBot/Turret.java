@@ -109,7 +109,7 @@ public class Turret implements Role {
 	 * @throws GameActionException
 	 */
 	public void attack() throws GameActionException {
-		if(targetUpdated && rc.isWeaponReady()) { //Snipe sighted
+		if(targetUpdated && rc.isWeaponReady() && rc.canAttackLocation(targetEnemy)) { //Snipe sighted
 			rc.attackLocation(targetEnemy);
 		}
 		else {

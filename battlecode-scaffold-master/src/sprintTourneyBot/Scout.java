@@ -76,7 +76,7 @@ public class Scout implements Role {
 					
 				}
 				else if(state == TARGETING) {
-					
+					findTarget();
 				}
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
@@ -196,6 +196,14 @@ public class Scout implements Role {
 				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MAXY, maxY), 0, broadcastDistance());
 				target = putInMap(target);
 			}
+		}
+	}
+	
+	private void findTarget() throws GameActionException {
+		RobotInfo target = Utility.getTarget(rc.senseHostileRobots(rc.getLocation(), -1), 0, rc.getLocation());
+		if(target != null) {
+			rc.setIndicatorDot(target.location, 250, 0, 0);
+			rc.broadcastMessageSignal(Comms.createHeader(Comms.TURRET_ATTACK_HERE), Comms.encodeLocation(target.location), 25);
 		}
 	}
 	
