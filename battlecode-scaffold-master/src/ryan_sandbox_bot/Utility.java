@@ -28,6 +28,21 @@ public class Utility {
 		return mesg;
 	}
 	
+	public static RobotInfo getTarget(RobotInfo[] robotsToSearch) {
+		double maxDamagePerHealth = -1;
+		RobotInfo targetRobot = null;
+		for(RobotInfo robot : robotsToSearch) {
+			//Should handle case if no attack power
+			double attackPower = (robot.attackPower < 0) ? 0 : robot.attackPower; 
+			double damagePerHealth = attackPower / robot.health;
+			if (damagePerHealth > maxDamagePerHealth) {
+				maxDamagePerHealth = damagePerHealth;
+				targetRobot = robot;
+			}
+		}
+		return targetRobot;
+	}
+	
 	/**
 	 * Decodes an encoded location message.
 	 * @param message encoded

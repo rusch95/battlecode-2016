@@ -27,13 +27,13 @@ public class Soldier implements Role {
 			try {
 				RobotInfo[] enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), RobotType.SOLDIER.attackRadiusSquared);
 				if(enemiesWithinRange.length > 0) { //We're in combat
-					RobotInfo weakestEnemy = Utility.getWeakest(enemiesWithinRange);
+					RobotInfo weakestEnemy = Utility.getTarget(enemiesWithinRange);
 					if(rc.isWeaponReady() && weakestEnemy != null) {
 						rc.attackLocation(weakestEnemy.location);
 					}
 				} else {
 					RobotInfo[] friendsNearby = rc.senseNearbyRobots(10000, myTeam);
-					RobotInfo weakestFriend = Utility.getWeakest(friendsNearby);
+					RobotInfo weakestFriend = Utility.getTarget(friendsNearby);
 					if(weakestFriend.weaponDelay > 1) { //Injured friend nearby and fighting
 						if(rc.isCoreReady()) {
 							Utility.tryToMove(rc, rc.getLocation().directionTo(weakestFriend.location));
