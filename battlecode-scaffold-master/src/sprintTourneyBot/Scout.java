@@ -254,10 +254,15 @@ public class Scout implements Role {
 	 */
 	private void findTarget() throws GameActionException {
 		RobotInfo turret = findNearestTurret();
-		RobotInfo targetEnemy = Utility.getTarget(rc.senseHostileRobots(turret.location, RobotType.TURRET.attackRadiusSquared), GameConstants.TURRET_MINIMUM_RANGE, turret.location);
-		if(targetEnemy != null) {
-			rc.setIndicatorDot(targetEnemy.location, 250, 0, 0);
-			rc.broadcastMessageSignal(Comms.createHeader(Comms.TURRET_ATTACK_HERE), Comms.encodeLocation(targetEnemy.location), 25);
+		if(turret == null) {
+			state = EXPLORING;
+		}
+		else {
+			RobotInfo targetEnemy = Utility.getTarget(rc.senseHostileRobots(turret.location, RobotType.TURRET.attackRadiusSquared), GameConstants.TURRET_MINIMUM_RANGE, turret.location);
+			if(targetEnemy != null) {
+				rc.setIndicatorDot(targetEnemy.location, 250, 0, 0);
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.TURRET_ATTACK_HERE), Comms.encodeLocation(targetEnemy.location), 25);
+			}
 		}
 	}
 	

@@ -33,8 +33,8 @@ public class Soldier implements Role {
 					}
 				} else {
 					RobotInfo[] friendsNearby = rc.senseNearbyRobots(10000, myTeam);
-					RobotInfo weakestFriend = Utility.getTarget(friendsNearby);
-					if(weakestFriend.weaponDelay > 1) { //Injured friend nearby and fighting
+					RobotInfo weakestFriend = Utility.getWeakest(friendsNearby);
+					if(weakestFriend != null && weakestFriend.weaponDelay > 1) { //Injured friend nearby and fighting
 						if(rc.isCoreReady()) {
 							Utility.tryToMove(rc, rc.getLocation().directionTo(weakestFriend.location));
 						}

@@ -38,21 +38,16 @@ public class Archon implements Role {
 	private int scoutsKilled = 0;
 	private ArrayList<Integer> deadScouts = new ArrayList<>();
     
+	//Scan info
+	private int nearbyBio = 0;
+	private int nearbyTurrets = 0;
+	
 	//Recon Request stuff
 	private boolean reconRequested;
 	private int reconRequestTimeout = 0;
 	private MapLocation reconLocation;
 	
-	//Constants
-	private static final int MIGRATION_TARGET_THRESHOLD = 4;
-	private static final int DEN_SEIGE_THRESHOLD = 8;
-	private static final int DEN_TOO_CLOSE_THRESHOLD = 20;
-	private static final int PARTS_TARGET_THRESHOLD = 0;
-	private static final int PANIC_THRESHOLD = 8;
-	private static final int SQUAD_RADIUS = 7;
-	private static final int MIN_SURROUNDING_TURRETS = 1;
-	
-	
+	//This is Sprint 1.0
 	public Archon(RobotController rc){
 		this.rc = rc;
 		this.rand = new Random(rc.getID());
@@ -71,7 +66,6 @@ public class Archon implements Role {
 			try {
 				handleMessages();
 				scanArea();
-				RobotInfo[] enemies = rc.senseHostileRobots(rc.getLocation(), -1);
 				if(reconRequested) {
 					if(tryToBuild(RobotType.SCOUT)) {
 						rc.broadcastMessageSignal(Comms.createHeader(Comms.PLEASE_TARGET), Comms.encodeLocation(reconLocation), 2);
@@ -80,36 +74,40 @@ public class Archon implements Role {
 					}
 				}
 				
-				//Heal a bitch
-				RobotInfo weakestFriend = getRobotToHeal(rc.senseNearbyRobots(RobotType.ARCHON.attackRadiusSquared, rc.getTeam()));
-		        if (weakestFriend != null) {
-		        	rc.repair(weakestFriend.location);
-		        }
-		        
-		        
-				
-				if(scoutsKilled > 0) {
-					if(tryToBuild(RobotType.SCOUT) || Utility.chance(rand, 0.25)) scoutsKilled -= 1;
-				}
 				if (Utility.chance(rand, .25) && rc.getTeamParts() > 125) {
-					if (Utility.chance(rand, 0.25)) {
-						tryToBuild(RobotType.TURRET);
-					}
-					else if (Utility.chance(rand, .5)) {
-						tryToBuild(RobotType.SOLDIER);
-					} else {
+					if(nearbyBio < 3) {
 						tryToBuild(RobotType.GUARD);
+						
 					}
-				} else {
-					int[] slice = {0};
-					Utility.Tuple<Direction, Double> dpsDirTuple = Utility.getDirectionOfMostDPS(enemies, rc, slice);
-					if (dpsDirTuple != null) {
-						Direction dirDps = dpsDirTuple.x;
-						double dps = dpsDirTuple.y;
-						final double dpsThreshold = 3;
-						if (dps > dpsThreshold) {
-							prevDirection = Utility.tryToMove(rc, dirDps.opposite(), prevDirection);
+					else if(nearbyBio <= nearbyTurrets) {
+						if (Utility.chance(rand, .5)) {
+							tryToBuild(RobotType.SOLDIER);
 						}
+						else{
+							tryToBuild(RobotType.GUARD);
+						}
+					}
+					else if(Utility.chance(rand, 0.5)) {
+						tryToBuild(RobotType.TURRET);
+						
+					}
+					
+					if(scoutsKilled > 0 && weNeedExplorers() && Utility.chance(rand, 0.2)) {
+						if(tryToBuild(RobotType.SCOUT)) scoutsKilled -= 1;
+					}
+				}
+				
+		        healAlly();
+				
+				RobotInfo[] enemies = rc.senseHostileRobots(rc.getLocation(), -1);
+				int[] slice = {0};
+				Utility.Tuple<Direction, Double> dpsDirTuple = Utility.getDirectionOfMostDPS(enemies, rc, slice);
+				if (dpsDirTuple != null) {
+					Direction dirDps = dpsDirTuple.x;
+					double dps = dpsDirTuple.y;
+					final double dpsThreshold = 3;
+					if (dps > dpsThreshold) {
+						prevDirection = Utility.tryToMove(rc, dirDps.opposite(), prevDirection);
 					}
 				}
 				
@@ -127,10 +125,18 @@ public class Archon implements Role {
 	 * Scans the sight range of the Archon for stimuli
 	 */
 	private void scanArea() {
+		nearbyTurrets = 0;
+		nearbyBio = 0;
 		RobotInfo[] friendlies = rc.senseNearbyRobots(-1, myTeam);
 		for(RobotInfo friendly : friendlies) {
-			if(friendly.type.equals(RobotType.TURRET) && !turrets.contains(friendly.ID)) {
-				turrets.add(friendly.ID);
+			if(friendly.type.equals(RobotType.TURRET) || friendly.type.equals(RobotType.TTM)) {
+				if(!turrets.contains(friendly.ID)) {
+					turrets.add(friendly.ID);
+				}
+				nearbyTurrets++;
+			}
+			else if(friendly.type.equals(RobotType.GUARD) || friendly.type.equals(RobotType.SOLDIER)) {
+				nearbyBio++;
 			}
 		}
 	}
@@ -185,7 +191,7 @@ public class Archon implements Role {
 					}
 				}
 				else { //Basic Message
-					if(turrets.contains(id) && reconRequestTimeout == 0) { //Turret needs recon
+					if(turrets.contains(id) && reconRequestTimeout == 0 && Utility.chance(rand, 0.5)) { //Turret needs recon
 						reconRequestTimeout = 20;
 						reconRequested = true;
 						reconLocation = message.getLocation();
@@ -221,6 +227,20 @@ public class Archon implements Role {
 	}
 	
 	/**
+	 * Calculates if we really need to make more scouts right now
+	 * @return true if explorers would provide much benefit at all
+	 */
+	private boolean weNeedExplorers() {
+		int sum = 0;
+		if(minXFound) sum += 1;
+		if(maxXFound) sum += 1;
+		if(minYFound) sum += 1;
+		if(maxYFound) sum += 1;
+		if(dens.size() > 2) sum += 1;
+		return (sum < 4);
+	}
+	
+	/**
 	 * Detects the largest parts pile in sight.
 	 * @return MapLocation of largest parts pile, or null if none found.
 	 */
@@ -239,22 +259,24 @@ public class Archon implements Role {
 	}
 	
 	/**
-	 * Return the weakest nearby robot to heal
-	 * @param nearbyRobots to search through
-	 * @return RobotInfo of weakest robot
+	 * Heals the weakest nearby friendly
+	 * @throws GameActionException 
 	 */
-	public static RobotInfo getRobotToHeal(RobotInfo[] nearbyRobots) {
-		RobotInfo weakestBot = null;
+	public void healAlly() throws GameActionException {
+		RobotInfo[] nearbyRobots = rc.senseNearbyRobots(RobotType.ARCHON.attackRadiusSquared, rc.getTeam());
+		RobotInfo weakestFriend = null;
 		if (nearbyRobots.length > 0) {
         	double minHealth = Double.POSITIVE_INFINITY;
         	for (RobotInfo curBot : nearbyRobots){
         		if (curBot.health < minHealth && curBot.type != RobotType.ARCHON) {
         			minHealth = curBot.health;
-        			weakestBot = curBot;
+        			weakestFriend = curBot;
         		}
         	}
 		}
-		return weakestBot;
+		if (weakestFriend != null) {
+        	rc.repair(weakestFriend.location);
+        }
 	}
 	
 }
