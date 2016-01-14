@@ -34,6 +34,7 @@ public class Archon implements Role {
     private boolean maxXFound = false;
     private boolean minYFound = false;
     private boolean maxYFound = false;
+    private boolean denDestructionConfirmed = false;
 	
 	private int scoutsKilled = 0;
 	private ArrayList<Integer> deadScouts = new ArrayList<>();
@@ -49,14 +50,6 @@ public class Archon implements Role {
 	
 	//This is Sprint 1.0
 	public Archon(RobotController rc){
-		for (MapLocation loc : rc.getInitialArchonLocations(Team.A)) {
-			System.out.println("X:"+loc.x + " Y:"+loc.y);
-		}
-			
-		for (MapLocation loc : rc.getInitialArchonLocations(Team.A)) {
-			System.out.println("X:"+loc.x + " Y:"+loc.y);
-		}
-			
 		this.rc = rc;
 		this.rand = new Random(rc.getID());
 		this.myTeam = rc.getTeam();
@@ -82,15 +75,13 @@ public class Archon implements Role {
 					}
 				}
 				
-				tryToBuild(RobotType.SOLDIER);
-				
-				if (Utility.chance(rand, .25) && rc.getTeamParts() > 125 && false) {
+				if (Utility.chance(rand, .25) && rc.getTeamParts() > RobotType.VIPER.partCost) {
 					if(nearbyBio < 3) {
 						tryToBuild(RobotType.GUARD);
 						
 					}
-					else if(nearbyBio <= nearbyTurrets) {
-						if (Utility.chance(rand, .5)) {
+					else if(nearbyBio <= nearbyTurrets || Utility.chance(rand, .5)) {
+						if (Utility.chance(rand, .7)) {
 							tryToBuild(RobotType.SOLDIER);
 						}
 						else{
@@ -109,8 +100,13 @@ public class Archon implements Role {
 				
 		        healAlly();
 				
+		        if (dens.size() > 1 && nearbyBio > 5 && denDestructionConfirmed) {
+		        	rc.broadcastMessageSignal(Comms.createHeader(Comms.ATTACK_DEN), Comms.encodeLocation(dens.get(0)), 20000);
+		        }
+		        
 				RobotInfo[] enemies = rc.senseHostileRobots(rc.getLocation(), -1);
 				int[] slice = {0};
+				//TODO Add code to flag running away mode, if high enough dps
 				Utility.Tuple<Direction, Double> dpsDirTuple = Utility.getDirectionOfMostDPS(enemies, rc, slice);
 				if (dpsDirTuple != null) {
 					Direction dirDps = dpsDirTuple.x;

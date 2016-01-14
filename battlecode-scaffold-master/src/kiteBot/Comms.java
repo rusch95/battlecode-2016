@@ -26,6 +26,7 @@ public class Comms {
 	
 	//Recon messages
 	public static final int DEN_FOUND = 66; //If a den is scouted
+	public static final int DEN_DESTROYED = 67; //If a den is destroyed
 	public static final int ENEMY_ARCHON_SIGHTED = 70; //If an archon is scouted
 	public static final int PANIC = 75; //If there's a serious horde coming and more defenses are needed probably
 	public static final int SCOUT_DYING = 40; //A scout's dying hail mary
@@ -49,13 +50,6 @@ public class Comms {
 	public static final int DONT_ATTACK = 35; //Designating all units to ignore an attack message
 	
 	public static final int MIGRATE = 37; //Designating ALL troops to regroup near here
-	
-	//Basic Message commands
-	public static final int BASIC_ATTACK_FINISHED = 1;
-	public static final int BASIC_FOUND_OTHER_TEAM = 2; 
-	public static final int BASIC_FOUND_ZOMBIES = 3;
-	public static final int BASIC_FOUND_DEN = 4;
-	public static final int BASIC_FOUND_TURRETS = 5;
 
 	
 	/**
