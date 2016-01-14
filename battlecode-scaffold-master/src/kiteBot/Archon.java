@@ -49,6 +49,14 @@ public class Archon implements Role {
 	
 	//This is Sprint 1.0
 	public Archon(RobotController rc){
+		for (MapLocation loc : rc.getInitialArchonLocations(Team.A)) {
+			System.out.println("X:"+loc.x + " Y:"+loc.y);
+		}
+			
+		for (MapLocation loc : rc.getInitialArchonLocations(Team.A)) {
+			System.out.println("X:"+loc.x + " Y:"+loc.y);
+		}
+			
 		this.rc = rc;
 		this.rand = new Random(rc.getID());
 		this.myTeam = rc.getTeam();

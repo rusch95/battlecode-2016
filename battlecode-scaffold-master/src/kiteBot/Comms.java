@@ -51,11 +51,12 @@ public class Comms {
 	public static final int MIGRATE = 37; //Designating ALL troops to regroup near here
 	
 	//Basic Message commands
-	public static final int FOUND_OTHER_TEAM = 1; 
-	public static final int FOUND_ZOMBIES = 2;
-	public static final int FOUND_DEN = 3;
-	public static final int FOUND_TURRETS = 4;
-	public static final int ATTACK_FINISHED = 5;
+	public static final int BASIC_ATTACK_FINISHED = 1;
+	public static final int BASIC_FOUND_OTHER_TEAM = 2; 
+	public static final int BASIC_FOUND_ZOMBIES = 3;
+	public static final int BASIC_FOUND_DEN = 4;
+	public static final int BASIC_FOUND_TURRETS = 5;
+
 	
 	/**
 	 * Creates the first int of a message from the code digits and the aux digits

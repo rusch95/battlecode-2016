@@ -8,6 +8,7 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
+import battlecode.common.Signal;
 import battlecode.common.Team;
 
 public class Soldier implements Role {
@@ -15,11 +16,26 @@ public class Soldier implements Role {
 	private final Random rand;
     private final Team myTeam;
     private final Team otherTeam;
-    private MapLocation base;
+
     private Direction prevDirection = Direction.NONE;
     
     //Global Flags
     private boolean protectingBase = false;
+    private boolean attackingOtherTeam = false;
+    private boolean attackingZombies = false;
+    private boolean attackingTurrets = false;
+    private boolean attackingDen = false;
+    private boolean attackingTurtle = false;
+    private boolean actingOnMessage = false;
+    
+    //Global Locations
+    private MapLocation base;
+    private MapLocation otherTeamRadioedLoc = null;
+    private MapLocation zombieRadioedLoc = null;
+    private MapLocation turretRadioedLoc = null;
+    private MapLocation denRadioedLoc = null;
+    private MapLocation turtleRadioedLoc = null;
+
     
     //Magic Numbers
     private final int CLOSE_RANGE = 2;
@@ -34,8 +50,13 @@ public class Soldier implements Role {
 	private final int FAR_TOO_FEW = 0;
 	private final int MIN_SQUAD_NUM = 1;
 	private final double RETREAT_HEALTH_PERCENT = 0.35;
+	
+	private final int BROADCAST_OTHER_TEAM_ATTACK = 5;
+	private final int REBROADCAST_DISTANCE = 300;
+	private final int BASIC_GET_HELP_RANGE = 625;
     
 	public Soldier(RobotController rc){
+		
 		this.rc = rc;
 		this.rand = new Random(rc.getID());
 		this.myTeam = rc.getTeam();
@@ -50,28 +71,81 @@ public class Soldier implements Role {
 				RobotInfo[] enemiesSeen = rc.senseHostileRobots(rc.getLocation(), MAX_RANGE);
 				RobotInfo[] friendsSeen = rc.senseNearbyRobots(MAX_RANGE, myTeam);
 				RobotInfo[] enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), RobotType.SOLDIER.attackRadiusSquared);
+				Signal[] messageQueue = rc.emptySignalQueue();
+				
+				//Attack code
+				RobotInfo targetEnemy = null;
 				if(enemiesWithinRange.length > 0 && rc.isWeaponReady()) { //We're in combat
-					RobotInfo targetEnemy = Utility.getTarget(enemiesWithinRange, 0, rc.getLocation());
+					targetEnemy = Utility.getTarget(enemiesWithinRange, 0, rc.getLocation());
 					if( targetEnemy != null) {
 						rc.attackLocation(targetEnemy.location);
 					}
 				}
-				 //Flee code
-			    if (rc.getHealth() /rc.getType().maxHealth < RETREAT_HEALTH_PERCENT) {
-				Direction dirToGo = Direction.NONE;
-					if (Utility.chance(rand, .7)) {
-						dirToGo = rc.getLocation().directionTo(base);
-					} else if (Utility.chance(rand, .7) && enemiesWithinRange.length > 0) {
-						dirToGo = rc.getLocation().directionTo(enemiesWithinRange[0].location).opposite();
-					}
-					prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);		
 				
+				//Broadcasting code
+				if (!attackingOtherTeam && targetEnemy != null) {
+					if (enemiesSeen.length > BROADCAST_OTHER_TEAM_ATTACK && targetEnemy.team == otherTeam) {
+						Comms.broadcastBasic(Comms.BASIC_FOUND_OTHER_TEAM, BASIC_GET_HELP_RANGE, rc);
+						otherTeamRadioedLoc = rc.getLocation();
+						attackingOtherTeam = true;
+					}
+				} else if (!attackingDen && targetEnemy != null) {
+					if (targetEnemy.type == RobotType.ZOMBIEDEN) {
+						Comms.broadcastBasic(Comms.BASIC_FOUND_DEN, BASIC_GET_HELP_RANGE, rc);
+						denRadioedLoc = rc.getLocation();
+						attackingDen = true;
+					}				
+				} else if (!attackingZombies && targetEnemy != null) {
+					if (enemiesSeen.length > BROADCAST_OTHER_TEAM_ATTACK && targetEnemy.team == Team.ZOMBIE) {
+						Comms.broadcastBasic(Comms.BASIC_FOUND_OTHER_TEAM, BASIC_GET_HELP_RANGE, rc);
+						zombieRadioedLoc = rc.getLocation();
+						attackingZombies = true;
+					}
+				}
+				
+				//Rebroadcast code
+				if (attackingOtherTeam) {
+					if (rc.getLocation().distanceSquaredTo(otherTeamRadioedLoc) > REBROADCAST_DISTANCE) {
+						//Clean slate to recalculate location of enemy
+						Comms.broadcastBasic(Comms.BASIC_ATTACK_FINISHED, BASIC_GET_HELP_RANGE, rc);
+					}
+				}
+				if (attackingZombies) {
+					if (rc.getLocation().distanceSquaredTo(zombieRadioedLoc) > REBROADCAST_DISTANCE) {
+						//Clean slate to recalculate location of enemy
+						Comms.broadcastBasic(Comms.BASIC_ATTACK_FINISHED, BASIC_GET_HELP_RANGE, rc);
+					}
+				}
+				
+				//Done attacking code
+				if (enemiesSeen.length == 0) {
+					if (attackingDen) {
+						Comms.broadcastBasic(Comms.BASIC_ATTACK_FINISHED, BASIC_GET_HELP_RANGE, rc);
+					} else if (attackingZombies || attackingOtherTeam) {
+						Comms.broadcastBasic(Comms.BASIC_ATTACK_FINISHED, BASIC_GET_HELP_RANGE, rc);
+					}
+				}
+				
+				 //Flee code
+			    if (rc.getHealth() /rc.getType().maxHealth < RETREAT_HEALTH_PERCENT) {	    	
+					Direction dirToGo = Direction.NONE;
+						if (Utility.chance(rand, .7)) {
+							dirToGo = rc.getLocation().directionTo(base);
+						} else if (Utility.chance(rand, .7) && enemiesWithinRange.length > 0) {
+							dirToGo = rc.getLocation().directionTo(enemiesWithinRange[0].location).opposite();
+						}
+						prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);		
+				
+						
+						
 			    } else if (enemiesSeen.length > 0) {
 					//Move into firing range or kite them
 			    	//TODO Optimize the fuck out this. Preventing dying to ranged units
 					RobotInfo target = Utility.getTarget(enemiesSeen, 0, rc.getLocation());
 					int distanceToTarget = rc.getLocation().distanceSquaredTo(target.location);
-					if (distanceToTarget < (rc.getType().attackRadiusSquared - 1.4) && !protectingBase) {
+					if (target.type == RobotType.ZOMBIEDEN && distanceToTarget < 10) {
+						//We're in range. Do nothing
+					} else if (distanceToTarget < (rc.getType().attackRadiusSquared - 1.4) && !protectingBase) {
 						//KIIITTTEEEE
 						prevDirection=Utility.tryToMove(rc, target.location.directionTo(rc.getLocation()),prevDirection);
 					} else {
@@ -130,7 +204,7 @@ public class Soldier implements Role {
 					if (rc.isWeaponReady()) {
 						enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), RobotType.SOLDIER.attackRadiusSquared);
 						if(enemiesWithinRange.length > 0) { //We're in combat
-							RobotInfo targetEnemy = Utility.getTarget(enemiesWithinRange, 0, rc.getLocation());
+							targetEnemy = Utility.getTarget(enemiesWithinRange, 0, rc.getLocation());
 							if( targetEnemy != null) {
 								rc.attackLocation(targetEnemy.location);
 							}
