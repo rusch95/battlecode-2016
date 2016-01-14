@@ -17,18 +17,19 @@ public class Soldier implements Role {
 	private final Random rand;
     private final Team myTeam;
     private final Team otherTeam;
+    private final MapLocation[] myArchons;
 
+    //Previous state info
     private Direction prevDirection = Direction.NONE;
+    private double prevHealth;
     
     //Global Flags
     private boolean protectingBase = false;
-    private boolean attackingOtherTeam = false;
-    private boolean attackingZombies = false;
-    private boolean attackingTurrets = false;
-    private boolean attackingDen = false;
-    private boolean attackingTurtle = false;
     private boolean actingOnMessage = false;
     private boolean runningAway = false;
+    private boolean beingAttacked = false;
+    private boolean beingSniped = false;
+    private boolean sentMessage = false;
     
     //Global Locations
     private MapLocation base;
@@ -64,6 +65,8 @@ public class Soldier implements Role {
 		this.myTeam = rc.getTeam();
 		this.otherTeam = myTeam.opponent();
 		this.base = rc.getLocation();
+		this.prevHealth = rc.getHealth();
+		this.myArchons = rc.getInitialArchonLocations(myTeam);
 	}
 	
 	@Override
@@ -73,6 +76,28 @@ public class Soldier implements Role {
 				RobotInfo[] enemiesSeen = rc.senseHostileRobots(rc.getLocation(), MAX_RANGE);
 				RobotInfo[] friendsSeen = rc.senseNearbyRobots(MAX_RANGE, myTeam);
 				RobotInfo[] enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), RobotType.SOLDIER.attackRadiusSquared);
+				
+				rc.setIndicatorString(1, " "+rc.getCoreDelay());
+				//TEST
+				if (!sentMessage) {
+					sentMessage = true;
+					double coreDelayNeeded = 2.008 - rc.getCoreDelay();
+					rc.broadcastSignal(Comms.delayToRange(coreDelayNeeded, RobotType.SOLDIER.sensorRadiusSquared));
+					rc.setIndicatorString(2, " "+rc.getCoreDelay());
+					//Get 
+				}
+				//Change some flags if necessary
+				if (rc.getHealth() < prevHealth) {
+					beingAttacked = true;
+				} else {
+					beingAttacked = false;
+				} prevHealth = rc.getHealth();
+				
+				if (enemiesSeen.length == 0 && beingAttacked) {
+					beingSniped = true;
+				} else {
+					beingSniped = false;
+				}
 				
 				//Attack code
 				RobotInfo targetEnemy = null;
@@ -101,9 +126,9 @@ public class Soldier implements Role {
 					}
 				}
 				
-				if  (currentOrderedGoal != null) {
-					rc.setIndicatorLine(rc.getLocation(), currentOrderedGoal, 255, 255, 0);
-					rc.setIndicatorString(0, currentBasicGoal.x + " " + currentOrderedGoal.y);
+				if  (currentBasicGoal != null) {
+					rc.setIndicatorLine(rc.getLocation(), currentBasicGoal, 255, 255, 0);
+					rc.setIndicatorString(0, currentBasicGoal.x + " " + currentBasicGoal.y);
 				}
 				
 				handleMessages();
@@ -142,23 +167,24 @@ public class Soldier implements Role {
 				
 			    } else if (currentOrderedGoal != null) {
 					Direction dirToGo = rc.getLocation().directionTo(currentOrderedGoal);
-					prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);				
+					prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);	
+					
 				} else if (friendsSeen.length > 0) {
 					
 					swarmMovement();
-					
-					//To Handle if they moved into a range where they can now shoot the enemy
+				}
+						
+				//TODO Could replace with an offset of the direction moved
+				if (rc.isWeaponReady()) {
 					enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), RobotType.SOLDIER.attackRadiusSquared);
-					if (rc.isWeaponReady()) {
-						enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), RobotType.SOLDIER.attackRadiusSquared);
-						if(enemiesWithinRange.length > 0) { //We're in combat
-							targetEnemy = Utility.getTarget(enemiesWithinRange, 0, rc.getLocation());
-							if( targetEnemy != null) {
-								rc.attackLocation(targetEnemy.location);
-							}
+					if(enemiesWithinRange.length > 0) { //We're in combat
+						targetEnemy = Utility.getTarget(enemiesWithinRange, 0, rc.getLocation());
+						if( targetEnemy != null) {
+							rc.attackLocation(targetEnemy.location);
 						}
 					}
 				}
+				
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
 	            e.printStackTrace();
@@ -180,8 +206,6 @@ public class Soldier implements Role {
 					int aux = Comms.getAux(contents[0]);
 					MapLocation loc = Comms.decodeLocation(contents[1]);
 					switch (code){
-						case Comms.ATTACK_DEN:
-							currentOrderedGoal = loc;
 					}
 				}
 				else { //Basic Message
@@ -206,10 +230,11 @@ public class Soldier implements Role {
 		RobotInfo[] friendsSeen = rc.senseNearbyRobots(MAX_RANGE, myTeam);
 		
 		RobotInfo weakFriend = Utility.getWeakest(friendsSeen);
-		MapLocation closestArchon = Utility.getBotOfType(friendsSeen, RobotType.ARCHON, rand, rc).location;
-		if (closestArchon != null) base = closestArchon;
+		RobotInfo closestArchon = Utility.getBotOfType(friendsSeen, RobotType.ARCHON, rand, rc);
+		if (closestArchon != null) base = closestArchon.location;
 		
 		
+		//TODO Change bug where this will also include friends who broadcasted leading to their high weapon delay
 		if (medFriends.length > MIN_SQUAD_NUM && weakFriend != null  && weakFriend.weaponDelay > 1 && (weakFriend.type != RobotType.ARCHON || Utility.chance(rand, .6))) {
 			//Let's see if we have enough friends nearby
 			//to assault enemies attacking team mates

@@ -112,11 +112,20 @@ public class Comms {
 		int x = (message - y) / ( (int) Math.pow(10, yCoordLength) );
 		return new MapLocation(x,y);
 	}
+
+	/* Only works with delays greater than 0.05
+	 * 
+	 */
+	public static int delayToRange(double coreDelay, int sightRange) {
+		double x = (coreDelay - 0.05) / 0.03;
+		return (int) (sightRange * (2 + x));
+	}
 	
-	public static void broadcastBasic(int code, int radiusSquared, RobotController rc) throws GameActionException {
-		for (int i=0; i < code; i++) {
-			rc.broadcastSignal(radiusSquared);
-		} 
-	} 
-	
+	public static double rangeToDelay(int range, int sightRange) {
+		double x = range / sightRange - 2;
+		if (x < 0) {
+			x = 0;
+		}
+		return 0.05 + 0.03 * x;
+	}
 }
