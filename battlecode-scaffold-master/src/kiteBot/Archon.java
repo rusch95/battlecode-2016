@@ -80,8 +80,8 @@ public class Archon implements Role {
 						tryToBuild(RobotType.GUARD);
 						
 					}
-					else if(nearbyBio <= nearbyTurrets || Utility.chance(rand, .5)) {
-						if (Utility.chance(rand, .7)) {
+					else if(nearbyBio <= nearbyTurrets || Utility.chance(rand, .8)) {
+						if (Utility.chance(rand, .9)) {
 							tryToBuild(RobotType.SOLDIER);
 						}
 						else{
@@ -100,8 +100,8 @@ public class Archon implements Role {
 				
 		        healAlly();
 				
-		        if (dens.size() > 1 && nearbyBio > 5 && denDestructionConfirmed) {
-		        	rc.broadcastMessageSignal(Comms.createHeader(Comms.ATTACK_DEN), Comms.encodeLocation(dens.get(0)), 20000);
+		        if (dens.size() > 1 && Utility.chance(rand, .1)) {
+		        	rc.broadcastMessageSignal(Comms.createHeader(Comms.ATTACK_DEN), Comms.encodeLocation(dens.get(0)), 2000);
 		        }
 		        
 				RobotInfo[] enemies = rc.senseHostileRobots(rc.getLocation(), -1);

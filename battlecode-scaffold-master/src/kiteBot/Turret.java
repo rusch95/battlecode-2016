@@ -35,6 +35,7 @@ public class Turret implements Role {
     
     //Constants
     private static final int NEED_RECON_RANGE = 8;
+    private static final int BROADCAST_RANGE = 16; //TODO Change to distance from archon, plus small factor
     
 	public Turret(RobotController rc){
 		this.rc = rc;
@@ -173,7 +174,7 @@ public class Turret implements Role {
 			}
 		}
 		if(!weGood && rc.getRoundNum()%3 == 1) {
-			rc.broadcastSignal(25);
+			rc.broadcastSignal(BROADCAST_RANGE);
 		}
 	}
 	

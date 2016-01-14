@@ -34,11 +34,6 @@ public class Soldier implements Role {
     private MapLocation base;
     private MapLocation currentBasicGoal;
     private MapLocation currentOrderedGoal;
-    private MapLocation otherTeamRadioedLoc = null;
-    private MapLocation zombieRadioedLoc = null;
-    private MapLocation turretRadioedLoc = null;
-    private MapLocation denRadioedLoc = null;
-    private MapLocation turtleRadioedLoc = null;
     
     //Global Integers
     private int basicGoalTimeout = 0;
@@ -57,9 +52,7 @@ public class Soldier implements Role {
 	private final int MIN_SQUAD_NUM = 1;
 	private final double RETREAT_HEALTH_PERCENT = 0.35;
 	
-	private final int BROADCAST_OTHER_TEAM_ATTACK = 5;
-	private final int REBROADCAST_DISTANCE = 300;
-	private final int BASIC_GET_HELP_RANGE = 1000;
+	private final int BASIC_GET_HELP_RANGE = 200;
 	private final int DONT_FOLLOW_BASIC_IN_BASE_DISTANCE = 16;
 	private final int REACHED_GOAL_DISTANCE = 16;
     private final int DONT_REBROADCAST_DISTANCE = 16;
@@ -80,7 +73,6 @@ public class Soldier implements Role {
 				RobotInfo[] enemiesSeen = rc.senseHostileRobots(rc.getLocation(), MAX_RANGE);
 				RobotInfo[] friendsSeen = rc.senseNearbyRobots(MAX_RANGE, myTeam);
 				RobotInfo[] enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), RobotType.SOLDIER.attackRadiusSquared);
-				Signal[] messageQueue = rc.emptySignalQueue();
 				
 				//Attack code
 				RobotInfo targetEnemy = null;
@@ -214,6 +206,8 @@ public class Soldier implements Role {
 		RobotInfo[] friendsSeen = rc.senseNearbyRobots(MAX_RANGE, myTeam);
 		
 		RobotInfo weakFriend = Utility.getWeakest(friendsSeen);
+		MapLocation closestArchon = Utility.getBotOfType(friendsSeen, RobotType.ARCHON, rand, rc).location;
+		if (closestArchon != null) base = closestArchon;
 		
 		
 		if (medFriends.length > MIN_SQUAD_NUM && weakFriend != null  && weakFriend.weaponDelay > 1 && (weakFriend.type != RobotType.ARCHON || Utility.chance(rand, .6))) {
