@@ -130,63 +130,60 @@ public class Soldier implements Role {
 				
 				//Cut end turn early if coreDelay too high
 				//TODO try amortizing costs to turns where you can't move
-				if (!rc.isCoreReady()) {
-					continue;
-				}
-				
-				 //Flee code
-			    if (rc.getHealth() / myType.maxHealth < RETREAT_HEALTH_PERCENT) {	    	
-					Direction dirToGo = Direction.NONE;
-						if (Utility.chance(rand, .7)) {
-							dirToGo = rc.getLocation().directionTo(base);
-						} else if (Utility.chance(rand, .7) && enemiesWithinRange.length > 0) {
-							dirToGo = rc.getLocation().directionTo(enemiesWithinRange[0].location).opposite();
+				if (rc.isCoreReady()) {
+					 //Flee code
+				    if (rc.getHealth() / myType.maxHealth < RETREAT_HEALTH_PERCENT) {	    	
+						Direction dirToGo = Direction.NONE;
+							if (Utility.chance(rand, .7)) {
+								dirToGo = rc.getLocation().directionTo(base);
+							} else if (Utility.chance(rand, .7) && enemiesWithinRange.length > 0) {
+								dirToGo = rc.getLocation().directionTo(enemiesWithinRange[0].location).opposite();
+							}
+							prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);
+							currentBasicGoal = null;
+							
+				    } else if (enemiesSeen.length > 0) {
+						//Move into firing range or kite them
+				    	//TODO Optimize the fuck out this. Preventing dying to ranged units
+						RobotInfo target = Utility.getTarget(enemiesSeen, 0, rc.getLocation());
+						int distanceToTarget = rc.getLocation().distanceSquaredTo(target.location);
+						if (target.type == RobotType.ZOMBIEDEN && distanceToTarget < WITHIN_DEN_RANGE) {
+							//We're in range. Do nothing
+						} else if (distanceToTarget < (rc.getType().attackRadiusSquared - 1.4) && !protectingBase) {
+							//KIIITTTEEEE
+							//TODO change movement so other troops don't block the kite moveback
+							prevDirection=Utility.tryToMove(rc, target.location.directionTo(rc.getLocation()),prevDirection);
+						} else {
+							prevDirection=Utility.tryToMove(rc, rc.getLocation().directionTo(target.location),prevDirection);
 						}
-						prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);
 						currentBasicGoal = null;
 						
-			    } else if (enemiesSeen.length > 0) {
-					//Move into firing range or kite them
-			    	//TODO Optimize the fuck out this. Preventing dying to ranged units
-					RobotInfo target = Utility.getTarget(enemiesSeen, 0, rc.getLocation());
-					int distanceToTarget = rc.getLocation().distanceSquaredTo(target.location);
-					if (target.type == RobotType.ZOMBIEDEN && distanceToTarget < WITHIN_DEN_RANGE) {
-						//We're in range. Do nothing
-					} else if (distanceToTarget < (rc.getType().attackRadiusSquared - 1.4) && !protectingBase) {
-						//KIIITTTEEEE
-						//TODO change movement so other troops don't block the kite moveback
-						prevDirection=Utility.tryToMove(rc, target.location.directionTo(rc.getLocation()),prevDirection);
-					} else {
-						prevDirection=Utility.tryToMove(rc, rc.getLocation().directionTo(target.location),prevDirection);
-					}
-					currentBasicGoal = null;
+				    } else if (currentBasicGoal != null) {
+						Direction dirToGo = rc.getLocation().directionTo(currentBasicGoal);
+						prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);
 					
-			    } else if (currentBasicGoal != null) {
-					Direction dirToGo = rc.getLocation().directionTo(currentBasicGoal);
-					prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);
-				
-			    } else if (currentOrderedGoal != null) {
-					Direction dirToGo = rc.getLocation().directionTo(currentOrderedGoal);
-					prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);	
-					
-				} else if (friendsSeen.length > 0) {
-					
-					swarmMovement();
-				}
+				    } else if (currentOrderedGoal != null) {
+						Direction dirToGo = rc.getLocation().directionTo(currentOrderedGoal);
+						prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);	
 						
-				//TODO Could replace with an offset of the direction moved
-				if (rc.isWeaponReady()) {
-					enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), RobotType.SOLDIER.attackRadiusSquared);
-					//TODO Cut down bytecode cost, by accounting for the movement
-					//taken this turn, so that you shoot properly
-					if(enemiesWithinRange.length > 0) { //We're in combat
-						targetEnemy = Utility.getTarget(enemiesWithinRange, 0, rc.getLocation());
-						if( targetEnemy != null) {
-							rc.attackLocation(targetEnemy.location);
+					} else if (friendsSeen.length > 0) {
+						
+						swarmMovement();
+					}
+							
+					//TODO Could replace with an offset of the direction moved
+					if (rc.isWeaponReady()) {
+						enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), RobotType.SOLDIER.attackRadiusSquared);
+						//TODO Cut down bytecode cost, by accounting for the movement
+						//taken this turn, so that you shoot properly
+						if(enemiesWithinRange.length > 0) { //We're in combat
+							targetEnemy = Utility.getTarget(enemiesWithinRange, 0, rc.getLocation());
+							if( targetEnemy != null) {
+								rc.attackLocation(targetEnemy.location);
+							}
 						}
 					}
 				}
-				
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
 	            e.printStackTrace();
