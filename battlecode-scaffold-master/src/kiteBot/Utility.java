@@ -286,17 +286,7 @@ public class Utility {
 		int[] numOfTypeInDirection = new int[8];
 		for (RobotInfo robot : robotsToSearch) {
 			Direction dirToRobot = myLocation.directionTo(robot.location);
-			switch (dirToRobot) {
-				case NORTH:      numOfTypeInDirection[0] += 1;  break;
-				case NORTH_EAST: numOfTypeInDirection[1] += 1;  break;
-				case EAST:       numOfTypeInDirection[2] += 1;  break;
-				case SOUTH_EAST: numOfTypeInDirection[3] += 1;  break;
-				case SOUTH:      numOfTypeInDirection[4] += 1;  break;
-				case SOUTH_WEST: numOfTypeInDirection[5] += 1;  break;
-				case WEST:       numOfTypeInDirection[6] += 1;  break;
-				case NORTH_WEST: numOfTypeInDirection[7] += 1;  break;
-				default:
-			}
+			numOfTypeInDirection[dirToRobot.ordinal()]++;
 		}
 		int maxIndex = -1;
 		int maxValue = 0;
@@ -368,17 +358,7 @@ public class Utility {
 			if (attackDelay <= 0)
 				attackDelay = 1;
 			double dps = robot.attackPower / attackDelay;
-			switch (dirToRobot) {
-				case NORTH:      dpsInDirection[0] += dps; break;
-				case NORTH_EAST: dpsInDirection[1] += dps; break;
-				case EAST:       dpsInDirection[2] += dps; break;
-				case SOUTH_EAST: dpsInDirection[3] += dps; break;
-				case SOUTH:      dpsInDirection[4] += dps; break;
-				case SOUTH_WEST: dpsInDirection[5] += dps; break;
-				case WEST:       dpsInDirection[6] += dps; break;
-				case NORTH_WEST: dpsInDirection[7] += dps; break;
-				default:
-			}
+			dpsInDirection[dirToRobot.ordinal()] += dps;
 		}
 		int maxIndex = -1;
 		double maxValue = 0;
@@ -386,7 +366,7 @@ public class Utility {
 		//Directional Offsets
 		for (int i = 0; i < 8; i++) {
 			for (int offset : viewToConsider) {
-				widerView[i] += dpsInDirection[(i+offset+8)%8];
+				widerView[i] = (int) dpsInDirection[(i+offset+8)%8];
 			}
 		}
 		for (int i = 0; i < 8; i++) {
@@ -397,6 +377,7 @@ public class Utility {
 		}
 		if (maxIndex == -1) {
 			return null;
+			
 		} else {
 			Direction dir = directions[maxIndex];
 			double maxDps = dpsInDirection[maxIndex];
