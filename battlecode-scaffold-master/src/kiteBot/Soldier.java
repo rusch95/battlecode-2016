@@ -17,7 +17,10 @@ public class Soldier implements Role {
 	private final Random rand;
     private final Team myTeam;
     private final Team otherTeam;
+    private final RobotType myType;
+    private final int attackRadius;
     private final MapLocation[] myArchons;
+    private final MapLocation[] enemyArchons;
 
     //Previous state info
     private Direction prevDirection = Direction.NONE;
@@ -53,6 +56,8 @@ public class Soldier implements Role {
 	private final int MIN_SQUAD_NUM = 1;
 	private final double RETREAT_HEALTH_PERCENT = 0.35;
 	
+	private final int WITHIN_DEN_RANGE = 10;
+	
 	private final int BASIC_GET_HELP_RANGE = 200;
 	private final int DONT_FOLLOW_BASIC_IN_BASE_DISTANCE = 16;
 	private final int REACHED_GOAL_DISTANCE = 16;
@@ -66,26 +71,21 @@ public class Soldier implements Role {
 		this.otherTeam = myTeam.opponent();
 		this.base = rc.getLocation();
 		this.prevHealth = rc.getHealth();
+		this.myType = rc.getType();
+		this.attackRadius = myType.attackRadiusSquared;
 		this.myArchons = rc.getInitialArchonLocations(myTeam);
+		this.enemyArchons = rc.getInitialArchonLocations(otherTeam);
 	}
 	
 	@Override
 	public void run() {
 		while(true){
 			try {
+				//TODO Refactor to compute these only if necessary
 				RobotInfo[] enemiesSeen = rc.senseHostileRobots(rc.getLocation(), MAX_RANGE);
 				RobotInfo[] friendsSeen = rc.senseNearbyRobots(MAX_RANGE, myTeam);
-				RobotInfo[] enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), RobotType.SOLDIER.attackRadiusSquared);
-				
-				rc.setIndicatorString(1, " "+rc.getCoreDelay());
-				//TEST
-				if (!sentMessage) {
-					sentMessage = true;
-					double coreDelayNeeded = 2.008 - rc.getCoreDelay();
-					rc.broadcastSignal(Comms.delayToRange(coreDelayNeeded, RobotType.SOLDIER.sensorRadiusSquared));
-					rc.setIndicatorString(2, " "+rc.getCoreDelay());
-					//Get 
-				}
+				RobotInfo[] enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), attackRadius);
+
 				//Change some flags if necessary
 				if (rc.getHealth() < prevHealth) {
 					beingAttacked = true;
@@ -126,15 +126,10 @@ public class Soldier implements Role {
 					}
 				}
 				
-				if  (currentBasicGoal != null) {
-					rc.setIndicatorLine(rc.getLocation(), currentBasicGoal, 255, 255, 0);
-					rc.setIndicatorString(0, currentBasicGoal.x + " " + currentBasicGoal.y);
-				}
-				
 				handleMessages();
 				
 				 //Flee code
-			    if (rc.getHealth() /rc.getType().maxHealth < RETREAT_HEALTH_PERCENT) {	    	
+			    if (rc.getHealth() / myType.maxHealth < RETREAT_HEALTH_PERCENT) {	    	
 					Direction dirToGo = Direction.NONE;
 						if (Utility.chance(rand, .7)) {
 							dirToGo = rc.getLocation().directionTo(base);
@@ -143,18 +138,17 @@ public class Soldier implements Role {
 						}
 						prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);
 						currentBasicGoal = null;
-				
-						
 						
 			    } else if (enemiesSeen.length > 0) {
 					//Move into firing range or kite them
 			    	//TODO Optimize the fuck out this. Preventing dying to ranged units
 					RobotInfo target = Utility.getTarget(enemiesSeen, 0, rc.getLocation());
 					int distanceToTarget = rc.getLocation().distanceSquaredTo(target.location);
-					if (target.type == RobotType.ZOMBIEDEN && distanceToTarget < 10) {
+					if (target.type == RobotType.ZOMBIEDEN && distanceToTarget < WITHIN_DEN_RANGE) {
 						//We're in range. Do nothing
 					} else if (distanceToTarget < (rc.getType().attackRadiusSquared - 1.4) && !protectingBase) {
 						//KIIITTTEEEE
+						//TODO change movement so other troops don't block the kite moveback
 						prevDirection=Utility.tryToMove(rc, target.location.directionTo(rc.getLocation()),prevDirection);
 					} else {
 						prevDirection=Utility.tryToMove(rc, rc.getLocation().directionTo(target.location),prevDirection);
@@ -177,6 +171,8 @@ public class Soldier implements Role {
 				//TODO Could replace with an offset of the direction moved
 				if (rc.isWeaponReady()) {
 					enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), RobotType.SOLDIER.attackRadiusSquared);
+					//TODO Cut down bytecode cost, by accounting for the movement
+					//taken this turn, so that you shoot properly
 					if(enemiesWithinRange.length > 0) { //We're in combat
 						targetEnemy = Utility.getTarget(enemiesWithinRange, 0, rc.getLocation());
 						if( targetEnemy != null) {

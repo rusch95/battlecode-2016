@@ -43,6 +43,8 @@ public class Utility {
 	 * @param location location to search from
 	 * @return MapLocation location to base targeting off of
 	 * TODO Add heuristic for targeting infected and discriminate more among weaponless targets
+	 * TODO Target big zombies more
+	 * TODO Implement distance heuristics
 	 */
 	public static RobotInfo getTarget(RobotInfo[] robotsToSearch, int minRange, MapLocation location) {
 		double maxDamagePerHealth = -1;
@@ -50,14 +52,24 @@ public class Utility {
 		for(RobotInfo robot : robotsToSearch) {
 			//Miscellaneous factors for increasing weighting
 			double miscFactors = 1;
-			if (robot.type.equals(RobotType.VIPER))
-				miscFactors *= 5;
-			
 			double fudgeFactor = 0;
-			if (robot.type == RobotType.ARCHON) {
+			//TODO Micromanage this to optimize, since it's inside an expensive, often called loop
+			if (robot.type.equals(RobotType.VIPER)) {
+				miscFactors *= 5;
+			} else if (robot.type.equals(RobotType.BIGZOMBIE)) { //Heavy hitter should be taken down far away
+				miscFactors *= 3;
+			} else if (robot.type == RobotType.ARCHON) {
 				fudgeFactor = .5;
 			} else if (robot.type == RobotType.SCOUT) {
 				fudgeFactor = .3;
+			}
+			int distance = location.distanceSquaredTo(robot.location);
+			if (robot.team == Team.ZOMBIE) {
+				miscFactors *= 10 / Math.pow(distance, .3333); //Magic Number
+			} else {
+				if (robot.viperInfectedTurns > 3 || robot.zombieInfectedTurns > 3) {
+					miscFactors *= Math.pow(distance,.7); //Magic
+				}
 			}
 			
 			double attackDelay = robot.type.attackDelay;
@@ -66,7 +78,7 @@ public class Utility {
 			
 			// TODO Change attack power to have small additions, so different small value added for 
 			double damagePerHealth = (robot.attackPower + fudgeFactor) / attackDelay / robot.health * miscFactors;
-			if (damagePerHealth > maxDamagePerHealth && location.distanceSquaredTo(robot.location) > minRange) {
+			if (damagePerHealth > maxDamagePerHealth && distance > minRange) {
 				maxDamagePerHealth = damagePerHealth;
 				targetRobot = robot;
 			}
@@ -220,7 +232,8 @@ public class Utility {
 		return numberOf;
 	}
 	
-	private static final int[] directionsToTry = {0, -1, 1, -2, 2};
+	private static final int[] directionsToTryFirst = {0, -1, 1};
+	private static final int[] directionsToTrySecond = {-2, 2};
 	
 	/**
 	 * Try to move the given robot in the given direction.
@@ -230,9 +243,9 @@ public class Utility {
 	 */
 	public static Direction tryToMove(RobotController rc, Direction forward, Direction prevDirection) throws GameActionException {
 		if(rc.isCoreReady()){
-			for(int deltaD:directionsToTry){
+			for(int deltaD:directionsToTryFirst){
 				Direction attemptDirection = Direction.values()[(forward.ordinal()+deltaD+8)%8];
-				if(rc.canMove(attemptDirection) && prevDirection != attemptDirection){
+				if(rc.canMove(attemptDirection)){
 					rc.move(attemptDirection);
 					return attemptDirection.opposite();
 				}
@@ -266,6 +279,7 @@ public class Utility {
 	 * @return
 	 */
 	public static Direction getDirectionOfType(RobotInfo[] robotsToSearch, RobotType type, RobotController rc) {
+		//TODO refactor to use ordinal method instead of switch case. And do this for dps as well
 		MapLocation myLocation = rc.getLocation();
 		int[] numOfTypeInDirection = new int[8];
 		for (RobotInfo robot : robotsToSearch) {
@@ -302,6 +316,20 @@ public class Utility {
 			return null;
 		} else {
 			return directions[maxIndex];
+		}
+	}
+	/**
+	 * Returns the delay to core and weapon delay from using too much bytecode
+	 * @param bytecode The amount of bytecode used
+	 * @param maxBytecode The max amount of bytecode this robot can use
+	 * @return a double corresponding to the extra delay penalty.
+	 */
+	public static double bytecodeDelayPenalty(int bytecode, int maxBytecode) {
+		double cost = Math.pow((bytecode + 8000 - maxBytecode)/8000,1.5);
+		if (cost < 0) {
+			return 0;
+		} else {
+			return cost;
 		}
 	}
 	

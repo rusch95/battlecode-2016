@@ -173,7 +173,7 @@ public class Turret implements Role {
 				break;
 			}
 		}
-		if(!weGood && rc.getRoundNum()%3 == 1) {
+		if(!weGood && rc.getRoundNum() % 3 == 1) {
 			rc.broadcastSignal(BROADCAST_RANGE);
 		}
 	}

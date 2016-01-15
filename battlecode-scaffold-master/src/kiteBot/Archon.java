@@ -17,6 +17,9 @@ public class Archon implements Role {
 	private RobotController rc;
 	private Random rand;
 	private final Team myTeam;
+	private final Team otherTeam;
+	private final MapLocation[] myArchons;
+	private final MapLocation[] enemyArchons;
 	private MapLocation target;
 	
 	
@@ -34,6 +37,7 @@ public class Archon implements Role {
     private double prevHealth;
     private Direction prevDirection = Direction.NONE;
     private MapLocation lastSeenEnemyLoc = null;
+
     
     //Global Flags
     private boolean minXFound = false;
@@ -61,9 +65,13 @@ public class Archon implements Role {
 		this.rc = rc;
 		this.rand = new Random(rc.getID());
 		this.myTeam = rc.getTeam();
+		this.otherTeam = myTeam.opponent();
 		this.prevHealth = rc.getHealth();
+		this.myArchons = rc.getInitialArchonLocations(myTeam);
+		this.enemyArchons = rc.getInitialArchonLocations(otherTeam);
 		try {
-			tryToBuild(RobotType.SCOUT);
+			Direction dirToGo = rc.getLocation().directionTo(enemyArchons[0]);
+			prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
 		} catch (Exception e) {
             System.out.println(e.getMessage());
             e.printStackTrace();
@@ -73,8 +81,7 @@ public class Archon implements Role {
 	@Override
 	public void run() {
 		while(true){
-			try {
-				
+			try {				
 				//Change some flags if necessary
 				if (rc.getHealth() < prevHealth) {
 					beingAttacked = true;

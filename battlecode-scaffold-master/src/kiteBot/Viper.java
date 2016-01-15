@@ -51,9 +51,19 @@ public class Viper implements Role {
 					}
 				}
 				if (enemiesSeen.length > 0) {
-					//Move towards enemy
-					RobotInfo closeEnemy = Utility.getClosest(enemiesSeen, rc.getLocation());
-					prevDirection=Utility.tryToMove(rc, rc.getLocation().directionTo(closeEnemy.location),prevDirection);
+					//Move towards enemy					
+			    	//TODO Optimize the fuck out this. Preventing dying to ranged units
+					RobotInfo target = Utility.getTarget(enemiesSeen, 0, rc.getLocation());
+					int distanceToTarget = rc.getLocation().distanceSquaredTo(target.location);
+					if (target.type == RobotType.ZOMBIEDEN && distanceToTarget < 18) {
+						//We're in range. Do nothing
+					} else if (distanceToTarget < (rc.getType().attackRadiusSquared)) {
+						//KIIITTTEEEE
+						prevDirection=Utility.tryToMove(rc, target.location.directionTo(rc.getLocation()),prevDirection);
+					} else {
+						prevDirection=Utility.tryToMove(rc, rc.getLocation().directionTo(target.location),prevDirection);
+					}
+					
 				} else if (friendsSeen.length > 0) {
 					
 					RobotInfo[] closeFriends = rc.senseNearbyRobots(CLOSE_RANGE, myTeam); //Magic number
