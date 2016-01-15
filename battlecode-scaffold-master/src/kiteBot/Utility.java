@@ -243,6 +243,7 @@ public class Utility {
 	 */
 	public static Direction tryToMove(RobotController rc, Direction forward, Direction prevDirection) throws GameActionException {
 		if(rc.isCoreReady()){
+			
 			for(int deltaD:directionsToTryFirst){
 				Direction attemptDirection = Direction.values()[(forward.ordinal()+deltaD+8)%8];
 				if(rc.canMove(attemptDirection)){
@@ -254,6 +255,7 @@ public class Utility {
 			MapLocation ahead = rc.getLocation().add(forward);
 			if(rc.senseRubble(ahead)>=GameConstants.RUBBLE_OBSTRUCTION_THRESH){
 				rc.clearRubble(forward);
+				return Direction.NONE;
 			}	
 		}
 		return Direction.NONE;

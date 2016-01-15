@@ -128,6 +128,12 @@ public class Soldier implements Role {
 				
 				handleMessages();
 				
+				//Cut end turn early if coreDelay too high
+				//TODO try amortizing costs to turns where you can't move
+				if (!rc.isCoreReady()) {
+					continue;
+				}
+				
 				 //Flee code
 			    if (rc.getHealth() / myType.maxHealth < RETREAT_HEALTH_PERCENT) {	    	
 					Direction dirToGo = Direction.NONE;
@@ -200,9 +206,10 @@ public class Soldier implements Role {
 				if(contents != null) { //Not a basic signal
 					int code = Comms.getMessageCode(contents[0]);
 					int aux = Comms.getAux(contents[0]);
-					MapLocation loc = Comms.decodeLocation(contents[1]);
-					switch (code){
-					}
+					//Insert code to skip scout messages here and avoid expensive deocdeOp
+					//MapLocation loc = Comms.decodeLocation(contents[1]);
+					//switch (code){
+					//}
 				}
 				else { //Basic Message
 					//Treat as a goto request
