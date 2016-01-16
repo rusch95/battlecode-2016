@@ -89,7 +89,7 @@ public class Archon implements Role {
 			Direction dirToGo = rc.getLocation().directionTo(center);
 			prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
 			
-			//Determine Turtle
+			//TODO Possibly implement a variable number of turtles to be formed
 			int maxDistance = 0;
 			MapLocation turtlePos = null;
 			for (MapLocation archonPos : myArchons) {
@@ -149,13 +149,14 @@ public class Archon implements Role {
 					}
 				}
 				
-				if (Utility.chance(rand, .25) && rc.getTeamParts() > RobotType.TURRET.partCost && turtle) {
+				
+				
+				if (Utility.chance(rand, .33) && rc.getTeamParts() > RobotType.TURRET.partCost && turtle) {
 					if(nearbyBio < 3) {
 						tryToBuild(RobotType.GUARD);
-						
 					}
-					else if(nearbyBio <= nearbyTurrets || Utility.chance(rand, .8)) {
-						if (Utility.chance(rand, .9)) {
+					else if(nearbyBio <= nearbyTurrets) {
+						if (Utility.chance(rand, .5)) {
 							tryToBuild(RobotType.SOLDIER);
 						}
 						else{
@@ -165,9 +166,17 @@ public class Archon implements Role {
 					else if(Utility.chance(rand, 0.5)) {
 						tryToBuild(RobotType.TURRET);						
 					}
-					
 					if(scoutsKilled > 0 && weNeedExplorers() && Utility.chance(rand, 0.2)) {
 						if(tryToBuild(RobotType.SCOUT)) scoutsKilled -= 1;
+					}
+				}
+				
+				if (Utility.chance(rand, .17) && rc.getTeamParts() > RobotType.TURRET.partCost && !turtle) {
+					if (Utility.chance(rand, .5)) {
+						tryToBuild(RobotType.SOLDIER);
+					}
+					else{
+						tryToBuild(RobotType.GUARD);
 					}
 				}
 				

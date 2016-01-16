@@ -43,14 +43,14 @@ public class Soldier implements Role {
     private int basicGoalTimeout = 0;
     
     //Magic Numbers
-    private final int CLOSE_RANGE = 8;
-    private final int MED_RANGE = 17;
+    private final int CLOSE_RANGE = 2;
+    private final int MED_RANGE = 9;
     private final int FAR_RANGE = 25;
     private final int MAX_RANGE = -1;
-	private final int CLOSE_TOO_MANY = 5;
+	private final int CLOSE_TOO_MANY = 4;
 	private final int CLOSE_TOO_FEW = 2;
-	private final int MED_TOO_MANY = 10;
-	private final int MED_TOO_FEW = 5;
+	private final int MED_TOO_MANY = 8;
+	private final int MED_TOO_FEW = 3;
 	private final int FAR_TOO_MANY = 999;
 	private final int FAR_TOO_FEW = 0;
 	private final int MIN_SQUAD_NUM = 1;

@@ -58,8 +58,9 @@ public class Turret implements Role {
 						if (Utility.getNumberOfBotOfType(adjFriends, RobotType.TURRET ) > 5) {
 							rc.pack();
 						} else {
-							RobotInfo[] nearby = rc.senseNearbyRobots(1, rc.getTeam());
-							if (nearby.length > 5 && Utility.chance(rand, .33)) {
+							//TODO Fix getting unit stuck
+							RobotInfo[] nearby = rc.senseNearbyRobots(2, rc.getTeam());
+							if (nearby.length > 2 && rc.getTeamParts() > 400 && Utility.chance(rand, .33)) {
 								rc.pack();
 							}
 						}
@@ -72,10 +73,11 @@ public class Turret implements Role {
 			}
 			while(rc.getType() == RobotType.TTM) {
 				try {
-					Direction dirToGo = Utility.getRandomDirection(rand);
+					RobotInfo[] adjFriends = rc.senseNearbyRobots(9, myTeam);
+					RobotInfo archon = Utility.getBotOfType(adjFriends, RobotType.ARCHON, rand, rc);
+					Direction dirToGo = rc.getLocation().directionTo(archon.location).opposite();
 					prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);
-					if (Utility.chance(rand, .7)) {
-						RobotInfo[] adjFriends = rc.senseNearbyRobots(10, myTeam);
+					if (Utility.chance(rand, .5)) {
 						if (Utility.getNumberOfBotOfType(adjFriends, RobotType.TURRET ) <= 5) {
 							rc.unpack();
 						}
