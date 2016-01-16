@@ -36,8 +36,48 @@ public class Utility {
 		}
 		return weakestRobot;
 	}
-	
-	
+	/**
+	 * This function calculates certain map info such as symmetry and the map center via initial archon lists
+	 * @return Returns a Tuple of the form x = symmetry and y = map center constrained by symmetry. For symmetry, 0 = strong xy, 1 = x, 2 = y, and 3 = xy. 
+	 */
+	public static Tuple<Integer, MapLocation> startingMapInfo(MapLocation[] myArchons, MapLocation[] otherArchons) {
+		//Determine symmetry
+		MapLocation myLoc = myArchons[0];
+		boolean symY = false;
+		boolean symX = false;
+		int totalX = 0;
+		int totalY = 0;
+		for (MapLocation notMyLoc : otherArchons) {
+			if (myLoc.x == notMyLoc.x) {
+				symX = true;
+			}
+			if (myLoc.y == notMyLoc.y) {
+				symY = true;
+			}
+			totalX += notMyLoc.x;
+			totalY += notMyLoc.y;	
+		}
+		for (MapLocation loc : myArchons) {
+			totalX += loc.x;
+			totalY += loc.y;
+		}
+		
+		totalX /= myArchons.length * 2;
+		totalY /= myArchons.length * 2;
+		MapLocation center = new MapLocation(totalX, totalY);
+		int sym;
+		if (symY && symX) {
+			sym = 0;
+		} else if (symX) {
+			sym = 1;
+		} else if (symY) {
+			sym = 2;
+		} else {
+			sym = 3;
+		}
+		Tuple<Integer, MapLocation> symAndCenter = new Tuple<>(sym, center);
+		return symAndCenter;
+	}
 	
 	/**
 	 * Returns the RobotInfo of the robot with highest dps per health

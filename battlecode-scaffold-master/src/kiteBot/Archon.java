@@ -82,6 +82,21 @@ public class Archon implements Role {
 			//Quick fix to make sure not in corner
 			Direction dirToGo = rc.getLocation().directionTo(enemyArchons[0]);
 			prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
+			
+			Tuple<Integer, MapLocation> mapSymTup = Utility.startingMapInfo(myArchons, enemyArchons);
+			int sym = mapSymTup.x;
+			MapLocation center = mapSymTup.y;
+			String symmetry = null;
+			if (sym == 0 || sym == 3) {
+				symmetry = "XY";
+			} else if (sym == 1) {
+				symmetry = "X";
+			} else {
+				symmetry = "Y";
+			}
+			System.out.println("Symmetry is " + symmetry);
+			System.out.println("Map center X: " + center.x + " Y: " + center.y);
+			
 		} catch (Exception e) {
             System.out.println(e.getMessage());
             e.printStackTrace();
