@@ -98,7 +98,17 @@ public class Archon implements Role {
 					maxDistance = distance;
 				}
 			}
-			turtle = (startingPos.distanceSquaredTo(center) == maxDistance);
+			//Fix, since two can be the same distance
+			int highY = 0;
+			for (MapLocation archonPos : myArchons) {
+				int distance = archonPos.distanceSquaredTo(center);
+				if (distance == maxDistance) {
+					if (archonPos.y > highY) {
+						highY = archonPos.y;
+					}
+				}
+			}
+			turtle = (startingPos.distanceSquaredTo(center) == maxDistance && startingPos.y == highY);
 			
 		} catch (Exception e) {
             System.out.println(e.getMessage());
