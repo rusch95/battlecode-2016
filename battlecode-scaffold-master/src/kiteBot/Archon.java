@@ -91,24 +91,16 @@ public class Archon implements Role {
 			
 			//Determine Turtle
 			int maxDistance = 0;
+			MapLocation turtlePos = null;
 			for (MapLocation archonPos : myArchons) {
 				//Figure out which archon is the furthest from the center
 				int distance = archonPos.distanceSquaredTo(center);
 				if (distance > maxDistance) {
 					maxDistance = distance;
+					turtlePos = archonPos;
 				}
 			}
-			//Fix, since two can be the same distance
-			int highY = 0;
-			for (MapLocation archonPos : myArchons) {
-				int distance = archonPos.distanceSquaredTo(center);
-				if (distance == maxDistance) {
-					if (archonPos.y > highY) {
-						highY = archonPos.y;
-					}
-				}
-			}
-			turtle = (startingPos.distanceSquaredTo(center) == maxDistance && startingPos.y == highY);
+			turtle = (startingPos.equals(turtlePos));
 			
 		} catch (Exception e) {
             System.out.println(e.getMessage());
