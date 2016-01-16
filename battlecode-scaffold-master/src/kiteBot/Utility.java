@@ -36,6 +36,9 @@ public class Utility {
 		}
 		return weakestRobot;
 	}
+	
+	
+	
 	/**
 	 * Returns the RobotInfo of the robot with highest dps per health
 	 * @param robotsToSearch array of RobotInfo to search through
@@ -43,8 +46,9 @@ public class Utility {
 	 * @param location location to search from
 	 * @return MapLocation location to base targeting off of
 	 * TODO Add heuristic for targeting infected and discriminate more among weaponless targets
-	 * TODO Target big zombies more
+	 * TODO Target enemy archons when it looks like zombie time
 	 * TODO Implement distance heuristics
+	 * TODO Add heuristic for targeting enemies hitting high values targets such as turrets
 	 */
 	public static RobotInfo getTarget(RobotInfo[] robotsToSearch, int minRange, MapLocation location) {
 		double maxDamagePerHealth = -1;

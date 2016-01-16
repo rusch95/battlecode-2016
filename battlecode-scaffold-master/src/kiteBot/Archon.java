@@ -6,6 +6,7 @@ import java.util.Random;
 import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
+import battlecode.common.GameConstants;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
@@ -98,9 +99,26 @@ public class Archon implements Role {
 				
 				handleMessages();
 				scanArea();
-				Tuple partsLoc = searchForParts();
-				Tuple neutralBot = searchForNeutral();
 				
+				//Handles getting parts and neutral bots
+				Utility.Tuple<MapLocation, Double> partsTup = searchForParts();
+				MapLocation partsLoc = partsTup.x;
+				double partsValue = partsTup.y; //Not actually amount of parts, but heuristic value
+				Utility.Tuple<RobotInfo, Double> neutralBotTup = searchForNeutral();
+				RobotInfo neutralBot = neutralBotTup.x;
+				double neutralValue = neutralBotTup.y;
+				rc.setIndicatorString(1, "partsValue: "+partsValue);
+				rc.setIndicatorString(2, "Neutral Value: "+neutralValue);
+				if (neutralValue != 0) {
+					if (neutralValue > 2000 && rc.isCoreReady()) { //Magic indicating adjacent bot
+						rc.activate(neutralBot.location);
+					} else if (neutralValue > 80) {
+						prevDirection = Utility.tryToMove(rc, rc.getLocation().directionTo(neutralBot.location), prevDirection);
+					} 
+				}
+				if (partsValue !=0 && partsValue / rc.getTeamParts() * 300 > 10) {
+					prevDirection = Utility.tryToMove(rc, rc.getLocation().directionTo(partsLoc), prevDirection);
+				}
 				
 				
 				if(reconRequested) {
@@ -304,16 +322,21 @@ public class Archon implements Role {
 	/**
 	 * Detects the largest/closest parts pile in sight.
 	 * @return Tuple of form x = partsLocation, y = numberOfParts.
+	 * @throws GameActionException 
 	 */
-	private Tuple<MapLocation, Double>  searchForParts() {
+	private Tuple<MapLocation, Double>  searchForParts() throws GameActionException {
 		MapLocation[] partsLocations = rc.sensePartLocations(-1);
 		MapLocation bestPartsPile = null;
 		double maxParts = 0;
 		for(MapLocation location : partsLocations) {
 			//TODO Optimize best parts heuristic, such as adding in penalty for parts being in rubble
 			int distance = rc.getLocation().distanceSquaredTo(location);
-			double parts = rc.senseParts(location);
-			if(parts / Math.pow(distance, .5) > maxParts) {
+			double parts = rc.senseParts(location) / Math.pow(distance, .5);
+			if (rc.senseRobotAtLocation(location) != null) parts = 0; //Robot built on top, so let's not try to get it.
+			if (rc.senseRubble(location) > GameConstants.RUBBLE_OBSTRUCTION_THRESH) {
+				parts /= 20; //Magic
+			} 
+			if(parts > maxParts) {
 				bestPartsPile = location;
 				maxParts = parts;
 			}
@@ -331,7 +354,8 @@ public class Archon implements Role {
 		double bestValue = 0;
 		for(RobotInfo robot : neutralBots) {
 			//TODO Create actual heuristic
-			int distance = rc.getLocation().distanceSquaredTo(robot.location);
+			double distance = rc.getLocation().distanceSquaredTo(robot.location);
+			if (distance <= 2) distance = 0.0001; //Magic for having it pick closebots within range instantly
 			double value = rc.getHealth() / distance; //Temp heuristic that should value archons
 			if (value > bestValue) {
 				bestValue = value;
