@@ -55,6 +55,7 @@ public class Archon implements Role {
     private boolean beingAttacked = false;
     private boolean beingSniped = false;
     private boolean fleeMode = false;
+    private boolean turtle = false;
 	
 	private int scoutsKilled = 0;
 	private ArrayList<Integer> deadScouts = new ArrayList<>();
@@ -79,23 +80,25 @@ public class Archon implements Role {
 		this.enemyArchons = rc.getInitialArchonLocations(otherTeam);
 		this.startingPos = rc.getLocation();
 		try {
-			//Quick fix to make sure not in corner
-			Direction dirToGo = rc.getLocation().directionTo(enemyArchons[0]);
-			prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
 			
 			Tuple<Integer, MapLocation> mapSymTup = Utility.startingMapInfo(myArchons, enemyArchons);
 			int sym = mapSymTup.x;
 			MapLocation center = mapSymTup.y;
-			String symmetry = null;
-			if (sym == 0 || sym == 3) {
-				symmetry = "XY";
-			} else if (sym == 1) {
-				symmetry = "X";
-			} else {
-				symmetry = "Y";
+			
+			//Quick fix to make sure not in corner
+			Direction dirToGo = rc.getLocation().directionTo(center);
+			prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
+			
+			//Determine Turtle
+			int maxDistance = 0;
+			for (MapLocation archonPos : myArchons) {
+				//Figure out which archon is the furthest from the center
+				int distance = archonPos.distanceSquaredTo(center);
+				if (distance > maxDistance) {
+					maxDistance = distance;
+				}
 			}
-			System.out.println("Symmetry is " + symmetry);
-			System.out.println("Map center X: " + center.x + " Y: " + center.y);
+			turtle = (startingPos.distanceSquaredTo(center) == maxDistance);
 			
 		} catch (Exception e) {
             System.out.println(e.getMessage());
@@ -144,7 +147,7 @@ public class Archon implements Role {
 					}
 				}
 				
-				if (Utility.chance(rand, .25) && rc.getTeamParts() > RobotType.TURRET.partCost) {
+				if (Utility.chance(rand, .25) && rc.getTeamParts() > RobotType.TURRET.partCost && turtle) {
 					if(nearbyBio < 3) {
 						tryToBuild(RobotType.GUARD);
 						

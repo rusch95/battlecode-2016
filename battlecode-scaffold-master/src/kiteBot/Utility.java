@@ -36,8 +36,10 @@ public class Utility {
 		}
 		return weakestRobot;
 	}
+	
 	/**
 	 * This function calculates certain map info such as symmetry and the map center via initial archon lists
+	 * Center is only partially true. The X coordinate is true with Y-Sym and Y is true with X-Sym.
 	 * @return Returns a Tuple of the form x = symmetry and y = map center constrained by symmetry. For symmetry, 0 = strong xy, 1 = x, 2 = y, and 3 = xy. 
 	 */
 	public static Tuple<Integer, MapLocation> startingMapInfo(MapLocation[] myArchons, MapLocation[] otherArchons) {
