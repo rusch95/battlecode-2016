@@ -12,6 +12,7 @@ import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import battlecode.common.Signal;
 import battlecode.common.Team;
+import kiteBot.Utility.Tuple;
 
 public class Archon implements Role {
 	private RobotController rc;
@@ -90,12 +91,18 @@ public class Archon implements Role {
 	public void run() {
 		while(true){
 			try {				
-					
+				
+				//Set some flags
 				beingAttacked = (rc.getHealth() < prevHealth);
 				prevHealth = rc.getHealth();
 				
 				handleMessages();
 				scanArea();
+				Tuple partsLoc = searchForParts();
+				Tuple neutralBot = searchForNeutral();
+				
+				
+				
 				if(reconRequested) {
 					if(tryToBuild(RobotType.SCOUT)) {
 						rc.broadcastMessageSignal(Comms.createHeader(Comms.PLEASE_TARGET), Comms.encodeLocation(reconLocation), 2);
@@ -295,21 +302,44 @@ public class Archon implements Role {
 	}
 	
 	/**
-	 * Detects the largest parts pile in sight.
-	 * @return MapLocation of largest parts pile, or null if none found.
+	 * Detects the largest/closest parts pile in sight.
+	 * @return Tuple of form x = partsLocation, y = numberOfParts.
 	 */
-	private MapLocation searchForParts() {
-		MapLocation[] nearbyLocations = MapLocation.getAllMapLocationsWithinRadiusSq(rc.getLocation(), RobotType.ARCHON.sensorRadiusSquared);
+	private Tuple<MapLocation, Double>  searchForParts() {
+		MapLocation[] partsLocations = rc.sensePartLocations(-1);
 		MapLocation bestPartsPile = null;
 		double maxParts = 0;
-		for(MapLocation location : nearbyLocations) {
+		for(MapLocation location : partsLocations) {
+			//TODO Optimize best parts heuristic, such as adding in penalty for parts being in rubble
+			int distance = rc.getLocation().distanceSquaredTo(location);
 			double parts = rc.senseParts(location);
-			if(parts > maxParts) {
+			if(parts / Math.pow(distance, .5) > maxParts) {
 				bestPartsPile = location;
 				maxParts = parts;
 			}
 		}
-		return bestPartsPile;
+		Tuple<MapLocation, Double> locAndParts = new Tuple<>(bestPartsPile, maxParts);
+		return locAndParts;
+	}
+	/**
+	 * Returns the closests/best neutral bot in range.
+	 * @return Tuple of the form Tuple.x = bestBot and Tuple.y = bestValue
+	 */
+	private Tuple<RobotInfo, Double> searchForNeutral() {
+		RobotInfo[] neutralBots = rc.senseNearbyRobots(-1, Team.NEUTRAL);
+		RobotInfo bestBot = null;
+		double bestValue = 0;
+		for(RobotInfo robot : neutralBots) {
+			//TODO Create actual heuristic
+			int distance = rc.getLocation().distanceSquaredTo(robot.location);
+			double value = rc.getHealth() / distance; //Temp heuristic that should value archons
+			if (value > bestValue) {
+				bestValue = value;
+				bestBot = robot;
+			}
+		}
+		Tuple<RobotInfo, Double> robotAndValue = new Tuple<>(bestBot, bestValue);
+		return robotAndValue;
 	}
 	
 	/**
