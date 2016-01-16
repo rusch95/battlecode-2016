@@ -77,7 +77,7 @@ public class Turret implements Role {
 					prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);
 					if (Utility.chance(rand, .7)) {
 						RobotInfo[] adjFriends = rc.senseNearbyRobots(10, myTeam);
-						if (Utility.getNumberOfBotOfType(adjFriends, RobotType.TURRET ) < 6 || Utility.chance(rand, .1)) {
+						if (Utility.getNumberOfBotOfType(adjFriends, RobotType.TURRET ) < 4|| Utility.chance(rand, .1)) {
 							rc.unpack();
 						}
 					}			

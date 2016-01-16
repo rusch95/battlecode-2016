@@ -43,12 +43,12 @@ public class Soldier implements Role {
     private int basicGoalTimeout = 0;
     
     //Magic Numbers
-    private final int CLOSE_RANGE = 2;
+    private final int CLOSE_RANGE = 8;
     private final int MED_RANGE = 17;
     private final int FAR_RANGE = 25;
     private final int MAX_RANGE = -1;
-	private final int CLOSE_TOO_MANY = 2;
-	private final int CLOSE_TOO_FEW = 1;
+	private final int CLOSE_TOO_MANY = 5;
+	private final int CLOSE_TOO_FEW = 2;
 	private final int MED_TOO_MANY = 10;
 	private final int MED_TOO_FEW = 5;
 	private final int FAR_TOO_MANY = 999;
@@ -87,17 +87,8 @@ public class Soldier implements Role {
 				RobotInfo[] enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), attackRadius);
 
 				//Change some flags if necessary
-				if (rc.getHealth() < prevHealth) {
-					beingAttacked = true;
-				} else {
-					beingAttacked = false;
-				} prevHealth = rc.getHealth();
-				
-				if (enemiesSeen.length == 0 && beingAttacked) {
-					beingSniped = true;
-				} else {
-					beingSniped = false;
-				}
+				beingAttacked = (rc.getHealth() < prevHealth);
+				beingSniped = (enemiesSeen.length == 0 && beingAttacked);
 				
 				//Attack code
 				RobotInfo targetEnemy = null;
@@ -108,74 +99,57 @@ public class Soldier implements Role {
 					}
 				}
 				
-				//Broadcast code
-				if (targetEnemy != null && basicGoalTimeout == 0 && Utility.chance(rand, .5)) {
-					if (targetEnemy.team == otherTeam || targetEnemy.type == RobotType.ZOMBIEDEN) {
-						rc.broadcastSignal(BASIC_GET_HELP_RANGE);
-						currentBasicGoal = rc.getLocation();
-						basicGoalTimeout = 20;
-					}
-				}
 				
-				//Who needs goals
-				if (currentBasicGoal != null) {
-					if (rc.getLocation().distanceSquaredTo(currentBasicGoal) < REACHED_GOAL_DISTANCE && basicGoalTimeout < 10 || basicGoalTimeout == 0) {
-						currentBasicGoal = null;
-					} else if (basicGoalTimeout > 0) {
-						basicGoalTimeout--;
-					}
-				}
 				
-				handleMessages();
-				
-				//Cut end turn early if coreDelay too high
-				//TODO try amortizing costs to turns where you can't move
-				if (rc.isCoreReady()) {
-					 //Flee code
-				    if (rc.getHealth() / myType.maxHealth < RETREAT_HEALTH_PERCENT) {	    	
-						Direction dirToGo = Direction.NONE;
+				//Amortizes bytecode usage
+				if (!rc.isCoreReady()) {
+					handleMessages();
+				} else {
+					//Movement code
+					Direction dirToGo = Direction.NONE;
+				    if (rc.getHealth() / myType.maxHealth < RETREAT_HEALTH_PERCENT) {
+				    	//Retreat
+				    	//TODO Optimize
 							if (Utility.chance(rand, .7)) {
 								dirToGo = rc.getLocation().directionTo(base);
 							} else if (Utility.chance(rand, .7) && enemiesWithinRange.length > 0) {
 								dirToGo = rc.getLocation().directionTo(enemiesWithinRange[0].location).opposite();
 							}
-							prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);
-							currentBasicGoal = null;
-							
+							prevDirection=Utility.tryToMove(rc, dirToGo, prevDirection);
 				    } else if (enemiesSeen.length > 0) {
-						//Move into firing range or kite them
-				    	//TODO Optimize the fuck out this. Preventing dying to ranged units
+				    	//TODO Optimize. Implement switch to just stay out of range while followed, else stay just out of range.
+				    	//Can probably implement by having them stand still if enemy still, else run along at rate of enemy
 						RobotInfo target = Utility.getTarget(enemiesSeen, 0, rc.getLocation());
+						Direction dirToTarget = rc.getLocation().directionTo(target.location);
 						int distanceToTarget = rc.getLocation().distanceSquaredTo(target.location);
-						if (target.type == RobotType.ZOMBIEDEN && distanceToTarget < WITHIN_DEN_RANGE) {
-							//We're in range. Do nothing
-						} else if (distanceToTarget < (rc.getType().attackRadiusSquared - 1.4) && !protectingBase) {
+						//Currently, this keeps them just in range
+						if (distanceToTarget <= (rc.getType().attackRadiusSquared) && !protectingBase && !beingSniped) {
 							//KIIITTTEEEE
-							//TODO change movement so other troops don't block the kite moveback
-							prevDirection=Utility.tryToMove(rc, target.location.directionTo(rc.getLocation()),prevDirection);
+							Direction dirAway = dirToTarget.opposite();
+							prevDirection=Utility.tryToMove(rc, dirAway, prevDirection);
+							dirToGo = dirAway;
 						} else {
-							prevDirection=Utility.tryToMove(rc, rc.getLocation().directionTo(target.location),prevDirection);
+							//Get closer
+							prevDirection=Utility.tryToMove(rc, dirToTarget,prevDirection);
+							dirToGo = dirToTarget;
 						}
-						currentBasicGoal = null;
 						
 				    } else if (currentBasicGoal != null) {
-						Direction dirToGo = rc.getLocation().directionTo(currentBasicGoal);
+						dirToGo = rc.getLocation().directionTo(currentBasicGoal);
 						prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);
 					
 				    } else if (currentOrderedGoal != null) {
-						Direction dirToGo = rc.getLocation().directionTo(currentOrderedGoal);
+						dirToGo = rc.getLocation().directionTo(currentOrderedGoal);
 						prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);	
 						
 					} else if (friendsSeen.length > 0) {
 						
-						swarmMovement();
+						dirToGo = swarmMovement();
+						
 					}
 							
-					//TODO Could replace with an offset of the direction moved
 					if (rc.isWeaponReady()) {
 						enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), RobotType.SOLDIER.attackRadiusSquared);
-						//TODO Cut down bytecode cost, by accounting for the movement
-						//taken this turn, so that you shoot properly
 						if(enemiesWithinRange.length > 0) { //We're in combat
 							targetEnemy = Utility.getTarget(enemiesWithinRange, 0, rc.getLocation());
 							if( targetEnemy != null) {
@@ -202,11 +176,14 @@ public class Soldier implements Role {
 				//TODO Include ignore bit to lower melee overhead
 				if(contents != null) { //Not a basic signal
 					int code = Comms.getMessageCode(contents[0]);
-					int aux = Comms.getAux(contents[0]);
-					//Insert code to skip scout messages here and avoid expensive deocdeOp
-					//MapLocation loc = Comms.decodeLocation(contents[1]);
-					//switch (code){
-					//}
+					int aux = Comms.getAux(contents[0]);					
+					switch (code){
+						case Comms.ATTACK_DEN:
+							MapLocation loc = Comms.decodeLocation(contents[1]);
+							currentOrderedGoal = loc;
+							beingSniped = true;
+							break;
+					}
 				}
 				else { //Basic Message
 					//Treat as a goto request
@@ -223,7 +200,7 @@ public class Soldier implements Role {
 		}
 	}
 	
-	private void swarmMovement() throws GameActionException{
+	private Direction swarmMovement() throws GameActionException{
 		
 		RobotInfo[] closeFriends = rc.senseNearbyRobots(CLOSE_RANGE, myTeam); //Magic number
 		RobotInfo[] medFriends = rc.senseNearbyRobots(MED_RANGE, myTeam); //More magic
@@ -235,21 +212,21 @@ public class Soldier implements Role {
 		
 		
 		//TODO Change bug where this will also include friends who broadcasted leading to their high weapon delay
+		Direction dirToGo = Direction.NONE;
 		if (medFriends.length > MIN_SQUAD_NUM && weakFriend != null  && weakFriend.weaponDelay > 1 && (weakFriend.type != RobotType.ARCHON || Utility.chance(rand, .6))) {
 			//Let's see if we have enough friends nearby
 			//to assault enemies attacking team mates
-			Direction dirToGo = rc.getLocation().directionTo(weakFriend.location);
+			dirToGo = rc.getLocation().directionTo(weakFriend.location);
 			prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);
 			
 	    } else if (closeFriends.length > CLOSE_TOO_MANY && Utility.chance(rand, .5)) {
 			//Spread Apart if too many units adjacent
-			Direction dirToGo = Utility.getRandomDirection(rand);
+			dirToGo = Utility.getRandomDirection(rand);
 			prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);
 			
 		} else if (closeFriends.length < CLOSE_TOO_FEW && Utility.chance(rand, .5)) {
 			//Come together if med range is sparse
 			RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc.getLocation());
-			Direction dirToGo = null;
 			if (Utility.chance(rand, .8)) {
 				//Whether to clump or go home
 				dirToGo = rc.getLocation().directionTo(closestFriend.location);
@@ -260,13 +237,12 @@ public class Soldier implements Role {
 			
 		} else if (medFriends.length > MED_TOO_MANY && Utility.chance(rand, .5)) {
 			//Come together if med range is sparse
-			Direction dirToGo = Utility.getRandomDirection(rand);
+			dirToGo = Utility.getRandomDirection(rand);
 			prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);		
 			
 		} else if (medFriends.length < MED_TOO_FEW && Utility.chance(rand, .5)) {
 			//Come together if med range is sparse
 			RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc.getLocation());
-			Direction dirToGo = null;
 			if (Utility.chance(rand, .8)) {
 				//Whether to clump or go home
 				dirToGo = rc.getLocation().directionTo(closestFriend.location);
@@ -275,6 +251,7 @@ public class Soldier implements Role {
 			}
 			prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);
 		}
+		return dirToGo;
 	}
 	
 	

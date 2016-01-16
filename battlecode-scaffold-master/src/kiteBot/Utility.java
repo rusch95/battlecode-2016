@@ -61,7 +61,9 @@ public class Utility {
 			} else if (robot.type == RobotType.ARCHON) {
 				fudgeFactor = .5;
 			} else if (robot.type == RobotType.SCOUT) {
+				//Scouts next to turrets should be super squashed to criple the turrets
 				fudgeFactor = .3;
+				miscFactors *= 5; 
 			}
 			int distance = location.distanceSquaredTo(robot.location);
 			if (robot.team == Team.ZOMBIE) {
@@ -106,6 +108,7 @@ public class Utility {
 			if (robot.type == RobotType.ARCHON) {
 				fudgeFactor = .5;
 			} else if (robot.type == RobotType.SCOUT) {
+				//TODO Modify so that enemy scouts that are helping turtle are destroyed
 				fudgeFactor = .3;
 			}
 			
@@ -236,27 +239,43 @@ public class Utility {
 	private static final int[] directionsToTrySecond = {-2, 2};
 	
 	/**
-	 * Try to move the given robot in the given direction.
+	 * Try to move the given robot in the given direction. Good now at plowing through rubble
 	 * @param rc RobotController for robot.
 	 * @param forward Direction to attempt movement.
 	 * @throws GameActionException 
 	 */
 	public static Direction tryToMove(RobotController rc, Direction forward, Direction prevDirection) throws GameActionException {
 		if(rc.isCoreReady()){
-			
 			for(int deltaD:directionsToTryFirst){
+				Direction attemptDirection = Direction.values()[(forward.ordinal()+deltaD+8)%8];
+				if(rc.canMove(attemptDirection)){
+					rc.move(attemptDirection);
+					return Direction.NONE;
+				}
+			}
+			//failed all attempts. Clear rubble ahead of us if we can.
+			double minRubble = 1000000;
+			Direction dirToClear = Direction.NONE;
+			for(int deltaD:directionsToTryFirst){
+				Direction attemptDirection = Direction.values()[(forward.ordinal()+deltaD+8)%8];
+				MapLocation ahead = rc.getLocation().add(attemptDirection);
+				double rubbleAmount = rc.senseRubble(ahead);
+				if(rc.onTheMap(ahead) && rubbleAmount >= GameConstants.RUBBLE_OBSTRUCTION_THRESH && rubbleAmount <= minRubble) {
+					minRubble = rubbleAmount;
+					dirToClear = attemptDirection;
+				}
+			}
+			if (dirToClear != Direction.NONE) {
+				rc.clearRubble(dirToClear);
+				return Direction.NONE;
+			}
+			for(int deltaD:directionsToTrySecond){
 				Direction attemptDirection = Direction.values()[(forward.ordinal()+deltaD+8)%8];
 				if(rc.canMove(attemptDirection)){
 					rc.move(attemptDirection);
 					return attemptDirection.opposite();
 				}
 			}
-			//failed all attempts. Clear rubble ahead of us if we can.
-			MapLocation ahead = rc.getLocation().add(forward);
-			if(rc.senseRubble(ahead)>=GameConstants.RUBBLE_OBSTRUCTION_THRESH){
-				rc.clearRubble(forward);
-				return Direction.NONE;
-			}	
 		}
 		return Direction.NONE;
 	}

@@ -17,7 +17,11 @@ public class Archon implements Role {
 	private RobotController rc;
 	private Random rand;
 	private final Team myTeam;
+	private final Team otherTeam;
 	private MapLocation target;
+	private MapLocation startingPos;
+	private final MapLocation[] myArchons;
+	private final MapLocation[] enemyArchons;
 	private Direction prevDirection = Direction.NONE;
 	
 	private ArrayList<Integer> turrets = new ArrayList<>();
@@ -52,6 +56,10 @@ public class Archon implements Role {
 		this.rc = rc;
 		this.rand = new Random(rc.getID());
 		this.myTeam = rc.getTeam();
+		this.otherTeam = myTeam.opponent();
+		this.startingPos = rc.getLocation();
+		this.myArchons = rc.getInitialArchonLocations(myTeam);
+		this.enemyArchons = rc.getInitialArchonLocations(otherTeam);
 		try {
 			tryToBuild(RobotType.SCOUT);
 		} catch (Exception e) {
@@ -74,7 +82,7 @@ public class Archon implements Role {
 					}
 				}
 				
-				if (Utility.chance(rand, .25) && rc.getTeamParts() > 125) {
+				if (Utility.chance(rand, .25) && rc.getTeamParts() > 130) {
 					if(nearbyBio < 3) {
 						tryToBuild(RobotType.GUARD);
 						

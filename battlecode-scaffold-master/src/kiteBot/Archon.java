@@ -33,10 +33,15 @@ public class Archon implements Role {
     private int minY = 0;
     private int maxY = Integer.MAX_VALUE;
     
+    //Magic numbers
+    private double DPS_RETREAT_THRESHOLD = 3;
+    private double SHIT_BRICKS = 100;
+    
     //Previous State Info
     private double prevHealth;
     private Direction prevDirection = Direction.NONE;
     private MapLocation lastSeenEnemyLoc = null;
+    private MapLocation startingPos;
 
     
     //Global Flags
@@ -47,6 +52,7 @@ public class Archon implements Role {
     private boolean denDestructionConfirmed = false;
     private boolean beingAttacked = false;
     private boolean beingSniped = false;
+    private boolean fleeMode = false;
 	
 	private int scoutsKilled = 0;
 	private ArrayList<Integer> deadScouts = new ArrayList<>();
@@ -69,7 +75,9 @@ public class Archon implements Role {
 		this.prevHealth = rc.getHealth();
 		this.myArchons = rc.getInitialArchonLocations(myTeam);
 		this.enemyArchons = rc.getInitialArchonLocations(otherTeam);
+		this.startingPos = rc.getLocation();
 		try {
+			//Quick fix to make sure not in corner
 			Direction dirToGo = rc.getLocation().directionTo(enemyArchons[0]);
 			prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
 		} catch (Exception e) {
@@ -82,13 +90,9 @@ public class Archon implements Role {
 	public void run() {
 		while(true){
 			try {				
-				//Change some flags if necessary
-				if (rc.getHealth() < prevHealth) {
-					beingAttacked = true;
-					rc.setIndicatorString(2, "Health = " + rc.getHealth());
-				} else {
-					beingAttacked = false;
-				} prevHealth = rc.getHealth();
+					
+				beingAttacked = (rc.getHealth() < prevHealth);
+				prevHealth = rc.getHealth();
 				
 				handleMessages();
 				scanArea();
@@ -100,7 +104,7 @@ public class Archon implements Role {
 					}
 				}
 				
-				if (Utility.chance(rand, .25) && rc.getTeamParts() > RobotType.VIPER.partCost) {
+				if (Utility.chance(rand, .25) && rc.getTeamParts() > RobotType.TURRET.partCost) {
 					if(nearbyBio < 3) {
 						tryToBuild(RobotType.GUARD);
 						
@@ -114,8 +118,7 @@ public class Archon implements Role {
 						}
 					}
 					else if(Utility.chance(rand, 0.5)) {
-						tryToBuild(RobotType.TURRET);
-						
+						tryToBuild(RobotType.TURRET);						
 					}
 					
 					if(scoutsKilled > 0 && weNeedExplorers() && Utility.chance(rand, 0.2)) {
@@ -136,11 +139,10 @@ public class Archon implements Role {
 					beingSniped = false;
 				}
 				
-				//TODO Optimize this piece
+				//TODO Optimize
 				if (beingSniped) {
 					if (lastSeenEnemyLoc != null && Utility.chance(rand, .5)) {
-						Direction dirToGo = rc.getLocation().directionTo(lastSeenEnemyLoc);
-						//TODO Implement code that uses the archon as a meat shield to destroy turrets
+						Direction dirToGo = rc.getLocation().directionTo(lastSeenEnemyLoc).opposite();
 						prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
 					} else {
 						Direction dirToGo = Utility.getRandomDirection(rand);
@@ -148,14 +150,13 @@ public class Archon implements Role {
 					}
 				}
 				
-				int[] slice = {0};
-				//TODO Add code to flag running away mode, if high enough dps
+				int[] slice = {-1,0,1};
 				Utility.Tuple<Direction, Double> dpsDirTuple = Utility.getDirectionOfMostDPS(enemies, rc, slice);
 				if (dpsDirTuple != null) {
 					Direction dirDps = dpsDirTuple.x;
 					double dps = dpsDirTuple.y;
-					final double dpsThreshold = 3;
-					if (dps > dpsThreshold) {
+					if (dps > DPS_RETREAT_THRESHOLD) {
+						fleeMode = (dps > SHIT_BRICKS);
 						prevDirection = Utility.tryToMove(rc, dirDps.opposite(), prevDirection);
 					}
 				}
@@ -246,6 +247,8 @@ public class Archon implements Role {
 						reconRequestTimeout = 20;
 						reconRequested = true;
 						reconLocation = message.getLocation();
+					} else {
+						
 					}
 				}
 			}
