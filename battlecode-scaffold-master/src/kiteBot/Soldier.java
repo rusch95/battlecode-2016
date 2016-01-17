@@ -54,10 +54,8 @@ public class Soldier implements Role {
 	private final int FAR_TOO_MANY = 999;
 	private final int FAR_TOO_FEW = 0;
 	private final int MIN_SQUAD_NUM = 1;
-	private final double RETREAT_HEALTH_PERCENT = 0.35;
-	
-	private final int WITHIN_DEN_RANGE = 10;
-	
+	private final double RETREAT_HEALTH_PERCENT = 0.35;	
+	private final int WITHIN_DEN_RANGE = 10;	
 	private final int BASIC_GET_HELP_RANGE = 200;
 	private final int DONT_FOLLOW_BASIC_IN_BASE_DISTANCE = 16;
 	private final int REACHED_GOAL_DISTANCE = 16;
@@ -123,11 +121,15 @@ public class Soldier implements Role {
 						Direction dirToTarget = rc.getLocation().directionTo(target.location);
 						int distanceToTarget = rc.getLocation().distanceSquaredTo(target.location);
 						//Currently, this keeps them just in range
-						if (distanceToTarget <= (rc.getType().attackRadiusSquared) && !protectingBase && !beingSniped) {
+						if (distanceToTarget <= (rc.getType().attackRadiusSquared) && target.type != RobotType.ZOMBIEDEN && !protectingBase && !beingSniped) {
 							//KIIITTTEEEE
 							Direction dirAway = dirToTarget.opposite();
 							prevDirection=Utility.tryToMove(rc, dirAway, prevDirection);
 							dirToGo = dirAway;
+							
+						} else if (target.type == RobotType.ZOMBIEDEN && distanceToTarget < 10) {
+							//Do nothing
+							
 						} else {
 							//Get closer
 							prevDirection=Utility.tryToMove(rc, dirToTarget,prevDirection);
@@ -176,13 +178,17 @@ public class Soldier implements Role {
 				//TODO Include ignore bit to lower melee overhead
 				if(contents != null) { //Not a basic signal
 					int code = Comms.getMessageCode(contents[0]);
-					int aux = Comms.getAux(contents[0]);					
+					int aux = Comms.getAux(contents[0]);
+					MapLocation loc;
 					switch (code){
 						case Comms.ATTACK_DEN:
-							MapLocation loc = Comms.decodeLocation(contents[1]);
+							loc = Comms.decodeLocation(contents[1]);
 							currentOrderedGoal = loc;
 							beingSniped = true;
 							break;
+						case Comms.ATTACK_ENEMY:
+							loc = Comms.decodeLocation(contents[1]);
+							currentOrderedGoal = loc;
 					}
 				}
 				else { //Basic Message

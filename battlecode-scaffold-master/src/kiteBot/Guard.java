@@ -4,10 +4,12 @@ import java.util.Random;
 
 import battlecode.common.Clock;
 import battlecode.common.Direction;
+import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
+import battlecode.common.Signal;
 import battlecode.common.Team;
 
 public class Guard implements Role {
@@ -15,8 +17,14 @@ public class Guard implements Role {
 	private final Random rand;
     private final Team myTeam;
     private final Team otherTeam;
-    private final MapLocation base;
+    private final RobotType myType;
+    private final int attackRadius;
+    private final MapLocation[] myArchons;
+    private final MapLocation[] enemyArchons;
+    
+    //Previou stat info
     private Direction prevDirection = Direction.NONE;
+    private double prevHealth;
     
     //Magic Numbers
     private final int CLOSE_RANGE = 5;
@@ -30,15 +38,41 @@ public class Guard implements Role {
 	private final int FAR_TOO_MANY = 999;
 	private final int FAR_TOO_FEW = 0;
 	private final int MIN_SQUAD_NUM = 1;
-    private final double RETREAT_HEALTH_PERCENT = 0.05;
+	private final double RETREAT_HEALTH_PERCENT = 0.35;	
+	private final int WITHIN_DEN_RANGE = 10;	
+	private final int BASIC_GET_HELP_RANGE = 200;
+	private final int DONT_FOLLOW_BASIC_IN_BASE_DISTANCE = 16;
+	private final int REACHED_GOAL_DISTANCE = 16;
+    private final int DONT_REBROADCAST_DISTANCE = 16;
 	
+    //Global Flags
+    private boolean protectingBase = false;
+    private boolean actingOnMessage = false;
+    private boolean runningAway = false;
+    private boolean beingAttacked = false;
+    private boolean beingSniped = false;
+    private boolean sentMessage = false;
+    
+    //Global Locations
+    private MapLocation base;
+    private MapLocation currentBasicGoal;
+    private MapLocation currentOrderedGoal;
+    
+    //Global Numbers
+    private int basicGoalTimeout = 0;
+    
 	public Guard(RobotController rc){
 		this.rc = rc;
 		this.rand = new Random(rc.getID());
 		this.myTeam = rc.getTeam();
 		this.otherTeam = myTeam.opponent();
 		this.base = rc.getLocation();
-		//TODO Have this update if the archons change position
+		//TODO update base location if archon changes position
+		this.prevHealth = rc.getHealth();
+		this.myType = rc.getType();
+		this.attackRadius = myType.attackRadiusSquared;
+		this.myArchons = rc.getInitialArchonLocations(myTeam);
+		this.enemyArchons = rc.getInitialArchonLocations(otherTeam);
 	}
 	
 	@Override
@@ -48,104 +82,51 @@ public class Guard implements Role {
 				RobotInfo[] enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), RobotType.GUARD.attackRadiusSquared);
 				RobotInfo[] enemiesSeen = rc.senseHostileRobots(rc.getLocation(), MAX_RANGE);
 				RobotInfo[] friendsSeen = rc.senseNearbyRobots(MAX_RANGE, myTeam);
+				
+				//Change some flags if necessary
+				beingAttacked = (rc.getHealth() < prevHealth);
+				beingSniped = (enemiesSeen.length == 0 && beingAttacked);
+				
+				RobotInfo targetEnemy = null;
 				if(enemiesWithinRange.length > 0 && rc.isWeaponReady()) { //We're in combat
-					RobotInfo targetEnemy = Utility.getTarget(enemiesWithinRange, 0, rc.getLocation());
+					targetEnemy = Utility.getTarget(enemiesWithinRange, 0, rc.getLocation());
 					if(targetEnemy != null) {
 						rc.attackLocation(targetEnemy.location);
 					} 
 				}
 				
-				//Flee code
-				if (rc.getHealth() / rc.getType().maxHealth < RETREAT_HEALTH_PERCENT) {
+				//Amortizes bytecode usage
+				if (!rc.isCoreReady()) {
+					handleMessages();
+				} else {
+					//Flee code
 					Direction dirToGo = Direction.NONE;
-					if (Utility.chance(rand, .7)) {
-						dirToGo = rc.getLocation().directionTo(base);
-					} else if (Utility.chance(rand, .7) && enemiesWithinRange.length > 0) {
-						dirToGo = rc.getLocation().directionTo(enemiesWithinRange[0].location).opposite();
-					}
-				prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
-				
-			    } else if (enemiesSeen.length > 0) {
-						//Move towards enemy
-						RobotInfo closeEnemy = Utility.getClosest(enemiesSeen, rc.getLocation());
-						prevDirection = Utility.tryToMove(rc, rc.getLocation().directionTo(closeEnemy.location), prevDirection);
-				} else if (friendsSeen.length > 0) {
-					
-					RobotInfo[] closeFriends = rc.senseNearbyRobots(CLOSE_RANGE, myTeam); //Magic number
-					RobotInfo[] medFriends = rc.senseNearbyRobots(MED_RANGE, myTeam); //More magic
-					
-					RobotInfo weakFriend = Utility.getWeakest(friendsSeen);
-					int byteCode = Clock.getBytecodeNum();
-					if (medFriends.length > MIN_SQUAD_NUM && weakFriend != null && weakFriend.weaponDelay > 1) {
-						//Let's see if we have enough friends nearby
-						//to assault enemies attacking team mates
-						Direction dirToGo = rc.getLocation().directionTo(weakFriend.location);
-						prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
-						rc.setIndicatorString(0, "First branch costs " + (Clock.getBytecodeNum() - byteCode));
-						
-					} else if (rc.getType().maxHealth / rc.getHealth() < RETREAT_HEALTH_PERCENT) {
-						Direction dirToGo = Direction.NONE;
+					if (rc.getHealth() / rc.getType().maxHealth < RETREAT_HEALTH_PERCENT) {
 						if (Utility.chance(rand, .7)) {
 							dirToGo = rc.getLocation().directionTo(base);
+							prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
 						} else if (Utility.chance(rand, .7) && enemiesWithinRange.length > 0) {
 							dirToGo = rc.getLocation().directionTo(enemiesWithinRange[0].location).opposite();
+							prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
 						}
-						prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
+					
+				    } else if (enemiesSeen.length > 0) {
+							//Move towards enemy
+							RobotInfo closeEnemy = Utility.getClosest(enemiesSeen, rc.getLocation());
+							prevDirection = Utility.tryToMove(rc, rc.getLocation().directionTo(closeEnemy.location), prevDirection);
+					
+				    } else if (currentBasicGoal != null) {
+						dirToGo = rc.getLocation().directionTo(currentBasicGoal);
+						prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);
+					
+				    } else if (currentOrderedGoal != null) {
+						dirToGo = rc.getLocation().directionTo(currentOrderedGoal);
+						prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);	
+					
+				    } else {
 						
-				    } else if (closeFriends.length > CLOSE_TOO_MANY) {
-						//Spread Apart if too many units adjacent
-				    	//TODO May change to modify robots seen if byte code more efficient that way
-				    	Direction dirOfType = null;
-				    	RobotInfo[] nearFriends = rc.senseNearbyRobots(CLOSE_RANGE, myTeam);
-				    	if (Utility.chance(rand, .1))
-				    		dirOfType = Utility.getDirectionOfType(nearFriends, RobotType.SOLDIER, rc);
-				    	Direction dirToGo = null;
-				    	if (dirOfType != null) {
-				    		dirToGo = dirOfType.opposite();
-				    		// This will cause the guard to move away from soldiers
-				    	} else {
-				    		dirToGo = Utility.getRandomDirection(rand);
-				    	}
-				    	prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
-						rc.setIndicatorString(0, "Third branch costs " + (Clock.getBytecodeNum() - byteCode));
+						swarmMovement();
 						
-					} else if (closeFriends.length < CLOSE_TOO_FEW && Utility.chance(rand, .5)) {
-						//Come together if med range is sparse
-						RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc.getLocation());
-						Direction dirToGo = null;
-						if (Utility.chance(rand, .8)) {
-							//Whether to clump or go home
-							dirToGo = rc.getLocation().directionTo(closestFriend.location);
-						} else {
-							dirToGo =  rc.getLocation().directionTo(base);
-						}
-						prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);		
-					} else if (medFriends.length > MED_TOO_MANY && Utility.chance(rand, .5)) {
-						//Come together if med range is sparse
-						Direction dirToGo = Utility.getRandomDirection(rand);
-						prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
-						
-					} else if (medFriends.length < MED_TOO_FEW && Utility.chance(rand, .5)) {
-						//Come together if med range is sparse
-						RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc.getLocation());
-						Direction dirToGo = null;
-						if (Utility.chance(rand, .8)) {
-							//Whether to clump or go home
-							dirToGo = rc.getLocation().directionTo(closestFriend.location);
-						} else {
-							dirToGo =  rc.getLocation().directionTo(base);
-						}
-						prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);	
-					}
-					//To Handle if they moved into a range where they can now shoot the enemy
-					if (rc.isWeaponReady()) {
-						enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), RobotType.GUARD.attackRadiusSquared);
-						if(enemiesWithinRange.length > 0) { //We're in combat
-							RobotInfo targetEnemy = Utility.getTarget(enemiesWithinRange, 0, rc.getLocation());
-							if( targetEnemy != null) {
-								rc.attackLocation(targetEnemy.location);
-							}
-						}
 					}
 				}
 			} catch (Exception e) {
@@ -157,7 +138,96 @@ public class Guard implements Role {
 	}
 	//~~~~~~~~~~~~~~~~~END MAIN LOOP~~~~~~~~~~~~~~~~~~~~
 	
-
+	private void handleMessages() {
+		Signal[] messages = rc.emptySignalQueue();
+		for(Signal message : messages) {
+			if(message.getTeam().equals(myTeam)){ //Friendly message
+				int[] contents = message.getMessage();
+				int id = message.getID();
+				//TODO Include ignore bit to lower melee overhead
+				if(contents != null) { //Not a basic signal
+					int code = Comms.getMessageCode(contents[0]);
+					int aux = Comms.getAux(contents[0]);	
+					MapLocation loc;
+					switch (code){
+						case Comms.ATTACK_DEN:
+							loc = Comms.decodeLocation(contents[1]);
+							currentOrderedGoal = loc;
+							beingSniped = true;
+							break;
+						case Comms.ATTACK_ENEMY:
+							loc = Comms.decodeLocation(contents[1]);
+							currentOrderedGoal = loc;
+					}
+				}
+				else { //Basic Message
+					//Treat as a goto request
+					if (rc.getLocation().distanceSquaredTo(base) < DONT_FOLLOW_BASIC_IN_BASE_DISTANCE) {
+						currentBasicGoal = null;
+					} else if (rc.getLocation().distanceSquaredTo(message.getLocation()) < DONT_REBROADCAST_DISTANCE) {
+						basicGoalTimeout = 20;					
+					} else if (basicGoalTimeout == 0){
+						currentBasicGoal = message.getLocation();
+						basicGoalTimeout = (int) (rc.getLocation().distanceSquaredTo(currentBasicGoal) * 1.5); //Magic number
+					}
+				}
+			}
+		}
+	}
+	
+	private Direction swarmMovement() throws GameActionException{
+		
+		RobotInfo[] closeFriends = rc.senseNearbyRobots(CLOSE_RANGE, myTeam); //Magic number
+		RobotInfo[] medFriends = rc.senseNearbyRobots(MED_RANGE, myTeam); //More magic
+		RobotInfo[] friendsSeen = rc.senseNearbyRobots(MAX_RANGE, myTeam);
+		
+		RobotInfo weakFriend = Utility.getWeakest(friendsSeen);
+		RobotInfo closestArchon = Utility.getBotOfType(friendsSeen, RobotType.ARCHON, rand, rc);
+		if (closestArchon != null) base = closestArchon.location;
+		
+		
+		//TODO Change bug where this will also include friends who broadcasted leading to their high weapon delay
+		Direction dirToGo = Direction.NONE;
+		if (medFriends.length > MIN_SQUAD_NUM && weakFriend != null  && weakFriend.weaponDelay > 1 && (weakFriend.type != RobotType.ARCHON || Utility.chance(rand, .6))) {
+			//Let's see if we have enough friends nearby
+			//to assault enemies attacking team mates
+			dirToGo = rc.getLocation().directionTo(weakFriend.location);
+			prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);
+			
+	    } else if (closeFriends.length > CLOSE_TOO_MANY && Utility.chance(rand, .5)) {
+			//Spread Apart if too many units adjacent
+			dirToGo = Utility.getRandomDirection(rand);
+			prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);
+			
+		} else if (closeFriends.length < CLOSE_TOO_FEW && Utility.chance(rand, .5)) {
+			//Come together if med range is sparse
+			RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc.getLocation());
+			if (Utility.chance(rand, .8) && closestFriend != null) {
+				//Whether to clump or go home
+				dirToGo = rc.getLocation().directionTo(closestFriend.location);
+			} else {
+				dirToGo =  rc.getLocation().directionTo(base);
+			}
+			prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);	
+			
+		} else if (medFriends.length > MED_TOO_MANY && Utility.chance(rand, .5)) {
+			//Come together if med range is sparse
+			dirToGo = Utility.getRandomDirection(rand);
+			prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);		
+			
+		} else if (medFriends.length < MED_TOO_FEW && Utility.chance(rand, .5)) {
+			//Come together if med range is sparse
+			RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc.getLocation());
+			if (Utility.chance(rand, .8) && friendsSeen != null) {
+				//Whether to clump or go home
+				dirToGo = rc.getLocation().directionTo(closestFriend.location);
+			} else {
+				dirToGo =  rc.getLocation().directionTo(base);
+			}
+			prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);
+		}
+		return dirToGo;
+	}
 	
 	
 }

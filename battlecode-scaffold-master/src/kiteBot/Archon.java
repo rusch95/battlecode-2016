@@ -13,6 +13,8 @@ import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import battlecode.common.Signal;
 import battlecode.common.Team;
+import battlecode.common.ZombieCount;
+import battlecode.common.ZombieSpawnSchedule;
 import kiteBot.Utility.Tuple;
 
 public class Archon implements Role {
@@ -38,6 +40,8 @@ public class Archon implements Role {
     //Magic numbers
     private double DPS_RETREAT_THRESHOLD = 3;
     private double SHIT_BRICKS = 100;
+    private double ACTIVATE_BOT_THRESHOLD = 10;
+    private double GET_PARTS_THRESHOLD = .033;
     
     //Previous State Info
     private double prevHealth;
@@ -85,10 +89,6 @@ public class Archon implements Role {
 			int sym = mapSymTup.x;
 			MapLocation center = mapSymTup.y;
 			
-			//Quick fix to make sure not in corner
-			Direction dirToGo = rc.getLocation().directionTo(center);
-			prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
-			
 			//TODO Possibly implement a variable number of turtles to be formed
 			int maxDistance = 0;
 			MapLocation turtlePos = null;
@@ -101,6 +101,17 @@ public class Archon implements Role {
 				}
 			}
 			turtle = (startingPos.equals(turtlePos));
+			
+			ZombieSpawnSchedule schedule = rc.getZombieSpawnSchedule();
+			int[] rounds = schedule.getRounds();
+			if (turtle) {
+				for (int round:rounds) {
+					ZombieCount[] counts = schedule.getScheduleForRound(round);
+					for (ZombieCount count : counts) {
+						System.out.println("Round " + round + "- Number of zombies: " + count.getCount() + " Type: " + String.valueOf(count.getType()));
+					}
+				}
+			}
 			
 		} catch (Exception e) {
             System.out.println(e.getMessage());
@@ -120,26 +131,53 @@ public class Archon implements Role {
 				handleMessages();
 				scanArea();
 				
-				//Handles getting parts and neutral bots
-				Utility.Tuple<MapLocation, Double> partsTup = searchForParts();
-				MapLocation partsLoc = partsTup.x;
-				double partsValue = partsTup.y; //Not actually amount of parts, but heuristic value
-				Utility.Tuple<RobotInfo, Double> neutralBotTup = searchForNeutral();
-				RobotInfo neutralBot = neutralBotTup.x;
-				double neutralValue = neutralBotTup.y;
-				rc.setIndicatorString(1, "partsValue: "+partsValue);
-				rc.setIndicatorString(2, "Neutral Value: "+neutralValue);
-				if (neutralValue != 0) {
-					if (neutralValue > 2000 && rc.isCoreReady()) { //Magic indicating adjacent bot
-						rc.activate(neutralBot.location);
-					} else if (neutralValue > 80) {
-						prevDirection = Utility.tryToMove(rc, rc.getLocation().directionTo(neutralBot.location), prevDirection);
-					} 
-				}
-				if (partsValue !=0 && partsValue / rc.getTeamParts() * 300 > 10) {
-					prevDirection = Utility.tryToMove(rc, rc.getLocation().directionTo(partsLoc), prevDirection);
+				//Don't be in corner, fix
+				for (Direction dir : Direction.values()) {
+					if (!rc.onTheMap(rc.getLocation().add(dir))) {
+						prevDirection = Utility.tryToMove(rc, dir.opposite(), prevDirection);
+					}
 				}
 				
+				//Handles getting parts and neutral bots
+				//TODO Decrease bytecode cost
+				//TODO See if tuples add tons of overhead
+				if (rc.isCoreReady()) {
+					Utility.Tuple<MapLocation, Double> partsTup = searchForParts();
+					MapLocation partsLoc = partsTup.x;
+					double partsValue = partsTup.y; //Not actually amount of parts, but heuristic value
+					Utility.Tuple<RobotInfo, Double> neutralBotTup = searchForNeutral();
+					RobotInfo neutralBot = neutralBotTup.x;
+					double neutralValue = neutralBotTup.y;
+					rc.setIndicatorString(1, "partsValue: "+partsValue);
+					rc.setIndicatorString(2, "Neutral Value: "+neutralValue);
+					if (neutralValue != 0) {
+						if (rc.getLocation().isAdjacentTo(neutralBot.location) && rc.isCoreReady()) { //Magic indicating adjacent bot
+							rc.activate(neutralBot.location);
+						} else if (neutralValue > ACTIVATE_BOT_THRESHOLD) {
+							prevDirection = Utility.tryToMove(rc, rc.getLocation().directionTo(neutralBot.location), prevDirection);
+						} 
+					}
+					if (partsValue / rc.getTeamParts() > GET_PARTS_THRESHOLD) {
+						prevDirection = Utility.tryToMove(rc, rc.getLocation().directionTo(partsLoc), prevDirection);
+					}
+				}	
+				//TEST Code
+				if (!turtle && rc.getRoundNum() > 1200 && rc.getRoundNum() < 1220) {
+					rc.broadcastMessageSignal(Comms.createHeader(Comms.ATTACK_ENEMY), Comms.encodeLocation(enemyArchons[0]), 500);
+					target = enemyArchons[0];
+				}
+				if (!turtle && rc.getRoundNum() > 1350 && rc.getRoundNum() < 1355) {
+					rc.broadcastMessageSignal(Comms.createHeader(Comms.ATTACK_ENEMY), Comms.encodeLocation(enemyArchons[2]), 500);
+					target = enemyArchons[2];
+				}
+				if (!turtle && rc.getRoundNum() > 1500 && rc.getRoundNum() < 1505) {
+					rc.broadcastMessageSignal(Comms.createHeader(Comms.ATTACK_ENEMY), Comms.encodeLocation(enemyArchons[1]), 500);
+					target = enemyArchons[1];
+				}
+				
+				if (target != null) {
+					prevDirection = Utility.tryToMove(rc, rc.getLocation().directionTo(target), prevDirection);
+				}
 				
 				if(reconRequested) {
 					if(tryToBuild(RobotType.SCOUT)) {
@@ -352,8 +390,10 @@ public class Archon implements Role {
 	 * Detects the largest/closest parts pile in sight.
 	 * @return Tuple of form x = partsLocation, y = numberOfParts.
 	 * @throws GameActionException 
+	 * TODO Expensive when there are a ton of parts. Figure way of decreasing cost
 	 */
 	private Tuple<MapLocation, Double>  searchForParts() throws GameActionException {
+		int bytes = Clock.getBytecodeNum();
 		MapLocation[] partsLocations = rc.sensePartLocations(-1);
 		MapLocation bestPartsPile = null;
 		double maxParts = 0;
@@ -370,6 +410,7 @@ public class Archon implements Role {
 				maxParts = parts;
 			}
 		}
+		rc.setIndicatorString(0, "Byte cost: " + (Clock.getBytecodeNum() - bytes));
 		Tuple<MapLocation, Double> locAndParts = new Tuple<>(bestPartsPile, maxParts);
 		return locAndParts;
 	}

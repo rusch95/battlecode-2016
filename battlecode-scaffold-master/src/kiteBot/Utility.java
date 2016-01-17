@@ -326,6 +326,27 @@ public class Utility {
 		return Direction.NONE;
 	}
 	
+	public static Direction tryToMoveDontClear(RobotController rc, Direction forward, Direction prevDirection) throws GameActionException {
+		if(rc.isCoreReady()){
+			for(int deltaD:directionsToTryFirst){
+				Direction attemptDirection = Direction.values()[(forward.ordinal()+deltaD+8)%8];
+				if(rc.canMove(attemptDirection)){
+					rc.move(attemptDirection);
+					return Direction.NONE;
+				}
+			}
+			
+			for(int deltaD:directionsToTrySecond){
+				Direction attemptDirection = Direction.values()[(forward.ordinal()+deltaD+8)%8];
+				if(rc.canMove(attemptDirection)){
+					rc.move(attemptDirection);
+					return attemptDirection.opposite();
+				}
+			}
+		}
+		return Direction.NONE;
+	}
+	
 	private static final Direction[] directions = {Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, Direction.SOUTH_EAST,
 												   Direction.SOUTH, Direction.SOUTH_WEST, Direction.WEST, Direction.NORTH_WEST};
 

@@ -12,6 +12,7 @@ import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import battlecode.common.Signal;
 import battlecode.common.Team;
+import kiteBot.Utility;
 
 public class Turret implements Role {
 	private final RobotController rc;
@@ -54,15 +55,10 @@ public class Turret implements Role {
 					if(targetEnemy != null) rc.setIndicatorDot(targetEnemy, 250, 0, 250);
 					attack();
 					checkForRecon();
-					if (Utility.chance(rand, .5)) {
-						RobotInfo[] adjFriends = rc.senseNearbyRobots(9, myTeam);
-						if (Utility.getNumberOfBotOfType(adjFriends, RobotType.TURRET ) > 4) {
+					if (Utility.chance(rand, .33)) {
+						RobotInfo[] adjFriends = rc.senseNearbyRobots(10, myTeam);
+						if (Utility.getNumberOfBotOfType(adjFriends, RobotType.TURRET ) >= 6) {
 							rc.pack();
-						} else {
-							RobotInfo[] nearby = rc.senseNearbyRobots(1, rc.getTeam());
-							if (nearby.length > 5 && Utility.chance(rand, .33)) {
-								rc.pack();
-							}
 						}
 					}
 				} catch (Exception e) {
@@ -74,10 +70,10 @@ public class Turret implements Role {
 			while(rc.getType() == RobotType.TTM) {
 				try {
 					Direction dirToGo = Utility.getRandomDirection(rand);
-					prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);
+					prevDirection=Utility.tryToMoveDontClear(rc, dirToGo,prevDirection);
 					if (Utility.chance(rand, .7)) {
 						RobotInfo[] adjFriends = rc.senseNearbyRobots(10, myTeam);
-						if (Utility.getNumberOfBotOfType(adjFriends, RobotType.TURRET ) < 4|| Utility.chance(rand, .1)) {
+						if (Utility.getNumberOfBotOfType(adjFriends, RobotType.TURRET ) < 6) {
 							rc.unpack();
 						}
 					}			

@@ -78,11 +78,11 @@ public class Turret implements Role {
 					Direction dirToGo = rc.getLocation().directionTo(archon.location).opposite();
 					prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);
 					if (Utility.chance(rand, .5)) {
-						if (Utility.getNumberOfBotOfType(adjFriends, RobotType.TURRET ) <= 5) {
+						if (Utility.getNumberOfBotOfType(adjFriends, RobotType.TURRET ) <= 4) {
 							rc.unpack();
 						}
-					}			
-				} catch (Exception e) {
+					}		 
+				} catch (Exception e)  {
 		            System.out.println(e.getMessage());
 		            e.printStackTrace();
 		    	}
