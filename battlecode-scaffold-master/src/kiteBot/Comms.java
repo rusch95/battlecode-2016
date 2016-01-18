@@ -51,6 +51,8 @@ public class Comms {
 	
 	public static final int MIGRATE = 37; //Designating ALL troops to regroup near here
 
+	public static final int TURRET_MOVE = 38;
+	public static final int TURRET_STOP = 39;
 	
 	/**
 	 * Creates the first int of a message from the code digits and the aux digits

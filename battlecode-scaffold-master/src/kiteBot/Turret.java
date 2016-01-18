@@ -23,6 +23,9 @@ public class Turret implements Role {
     
     private MapLocation targetEnemy;
     private boolean targetUpdated;
+    private MapLocation currentOrderedGoal;
+    
+    private boolean stopMoving = false;
     
     private int minX = 0;
     private int maxX = Integer.MAX_VALUE;
@@ -69,12 +72,22 @@ public class Turret implements Role {
 			}
 			while(rc.getType() == RobotType.TTM) {
 				try {
-					Direction dirToGo = Utility.getRandomDirection(rand);
-					prevDirection=Utility.tryToMoveDontClear(rc, dirToGo,prevDirection);
-					if (Utility.chance(rand, .7)) {
-						RobotInfo[] adjFriends = rc.senseNearbyRobots(10, myTeam);
-						if (Utility.getNumberOfBotOfType(adjFriends, RobotType.TURRET ) < 6) {
-							rc.unpack();
+					if (currentOrderedGoal != null && rc.getLocation().distanceSquaredTo(currentOrderedGoal) < RobotType.TURRET.sensorRadiusSquared) {
+						rc.setIndicatorString(0, ""+rc.getLocation().distanceSquaredTo(currentOrderedGoal));
+						handleMessages();
+						rc.unpack();		
+					} else if(currentOrderedGoal != null) {
+						rc.setIndicatorString(0, ""+rc.getLocation().distanceSquaredTo(currentOrderedGoal));
+						handleMessages();
+						prevDirection=Utility.tryToMoveDontClear(rc, rc.getLocation().directionTo(currentOrderedGoal),prevDirection);
+					} else {
+						Direction dirToGo = Utility.getRandomDirection(rand);
+						prevDirection=Utility.tryToMoveDontClear(rc, dirToGo,prevDirection);
+						if (Utility.chance(rand, .7)) {
+							RobotInfo[] adjFriends = rc.senseNearbyRobots(10, myTeam);
+							if (Utility.getNumberOfBotOfType(adjFriends, RobotType.TURRET ) < 6) {
+								rc.unpack();
+							}
 						}
 					}			
 				} catch (Exception e) {
@@ -89,8 +102,9 @@ public class Turret implements Role {
 
 	/**
 	 * Handles the contents of the signal queue
+	 * @throws GameActionException 
 	 */
-	public void handleMessages() {
+	public void handleMessages() throws GameActionException {
 		Signal[] messages = rc.emptySignalQueue();
 		for(Signal message : messages) {
 			if(message.getTeam().equals(myTeam)){ //Friendly message
@@ -129,6 +143,18 @@ public class Turret implements Role {
 							if(!maxYFound) {
 								maxY = aux;
 								maxYFound = true;
+							}
+							break;	
+						case Comms.TURRET_MOVE:
+							if (rc.getType() == RobotType.TURRET) {
+								rc.pack();
+								currentOrderedGoal = loc;
+					}
+							break;
+						case Comms.TURRET_STOP:
+							if (rc.getType() == RobotType.TTM) {
+								currentOrderedGoal = null;
+								rc.unpack();
 							}
 							break;
 					}

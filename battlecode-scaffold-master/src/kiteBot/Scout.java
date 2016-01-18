@@ -81,7 +81,7 @@ public class Scout implements Role {
 					if(rc.getLocation().distanceSquaredTo(target) > 2) {
 						moveTowardsTarget();
 					}
-					findTarget(); //The sooner we do this, the more likely they won't have moved yet. ??
+					findTarget(); //Time that this is done doesn't matter
 				}
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
@@ -276,7 +276,7 @@ public class Scout implements Role {
 		int bestDistance = Integer.MAX_VALUE;
 		MapLocation loc = rc.getLocation();
 		for(RobotInfo friendly : friendlies) {
-			if(friendly.type.equals(RobotType.TURRET)){
+			if(friendly.type == RobotType.TURRET || friendly.type == RobotType.TTM){
 				int distance = loc.distanceSquaredTo(friendly.location);
 				if(distance < bestDistance) {
 					best = friendly;

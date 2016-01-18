@@ -52,6 +52,7 @@ public class Guard implements Role {
     private boolean beingAttacked = false;
     private boolean beingSniped = false;
     private boolean sentMessage = false;
+    private boolean attackDen = false;
     
     //Global Locations
     private MapLocation base;
@@ -115,6 +116,14 @@ public class Guard implements Role {
 							RobotInfo closeEnemy = Utility.getClosest(enemiesSeen, rc.getLocation());
 							prevDirection = Utility.tryToMove(rc, rc.getLocation().directionTo(closeEnemy.location), prevDirection);
 					
+				    } else if (currentOrderedGoal != null && rc.canSense(currentOrderedGoal)) {
+				    	if (attackDen) {
+				    		if (rc.senseRobotAtLocation(currentOrderedGoal) == null) {
+				    			currentOrderedGoal = base;
+				    			attackDen = false;
+				    		}
+				    	}		
+							
 				    } else if (currentBasicGoal != null) {
 						dirToGo = rc.getLocation().directionTo(currentBasicGoal);
 						prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);
@@ -154,6 +163,7 @@ public class Guard implements Role {
 							loc = Comms.decodeLocation(contents[1]);
 							currentOrderedGoal = loc;
 							beingSniped = true;
+							attackDen = true;
 							break;
 						case Comms.ATTACK_ENEMY:
 							loc = Comms.decodeLocation(contents[1]);

@@ -33,6 +33,7 @@ public class Soldier implements Role {
     private boolean beingAttacked = false;
     private boolean beingSniped = false;
     private boolean sentMessage = false;
+    private boolean attackDen = false;
     
     //Global Locations
     private MapLocation base;
@@ -95,9 +96,7 @@ public class Soldier implements Role {
 					if( targetEnemy != null) {
 						rc.attackLocation(targetEnemy.location);
 					}
-				}
-				
-				
+				}			
 				
 				//Amortizes bytecode usage
 				if (!rc.isCoreReady()) {
@@ -135,6 +134,14 @@ public class Soldier implements Role {
 							prevDirection=Utility.tryToMove(rc, dirToTarget,prevDirection);
 							dirToGo = dirToTarget;
 						}
+					
+				    } else if (currentOrderedGoal != null && rc.canSense(currentOrderedGoal)) {
+				    	if (attackDen) {
+				    		if (rc.senseRobotAtLocation(currentOrderedGoal) == null) {
+				    			currentOrderedGoal = base;
+				    			attackDen = false;
+				    		}
+				    	}
 						
 				    } else if (currentBasicGoal != null) {
 						dirToGo = rc.getLocation().directionTo(currentBasicGoal);
@@ -142,7 +149,7 @@ public class Soldier implements Role {
 					
 				    } else if (currentOrderedGoal != null) {
 						dirToGo = rc.getLocation().directionTo(currentOrderedGoal);
-						prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);	
+						prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);		
 						
 					} else if (friendsSeen.length > 0) {
 						
@@ -185,6 +192,7 @@ public class Soldier implements Role {
 							loc = Comms.decodeLocation(contents[1]);
 							currentOrderedGoal = loc;
 							beingSniped = true;
+							attackDen = true;
 							break;
 						case Comms.ATTACK_ENEMY:
 							loc = Comms.decodeLocation(contents[1]);

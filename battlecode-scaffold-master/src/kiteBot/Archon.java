@@ -25,7 +25,7 @@ public class Archon implements Role {
 	private final MapLocation[] myArchons;
 	private final MapLocation[] enemyArchons;
 	private MapLocation target;
-	
+	private MapLocation closeDen;
 	
 	private ArrayList<Integer> turrets = new ArrayList<>();
 	
@@ -102,6 +102,8 @@ public class Archon implements Role {
 			}
 			turtle = (startingPos.equals(turtlePos));
 			
+			tryToBuild(RobotType.SCOUT);
+			
 			ZombieSpawnSchedule schedule = rc.getZombieSpawnSchedule();
 			int[] rounds = schedule.getRounds();
 			if (turtle) {
@@ -123,7 +125,6 @@ public class Archon implements Role {
 	public void run() {
 		while(true){
 			try {				
-				
 				//Set some flags
 				beingAttacked = (rc.getHealth() < prevHealth);
 				prevHealth = rc.getHealth();
@@ -149,7 +150,7 @@ public class Archon implements Role {
 					RobotInfo neutralBot = neutralBotTup.x;
 					double neutralValue = neutralBotTup.y;
 					rc.setIndicatorString(1, "partsValue: "+partsValue);
-					rc.setIndicatorString(2, "Neutral Value: "+neutralValue);
+					rc.setIndicatorString(2, "I am a turtle: "+String.valueOf(turtle));
 					if (neutralValue != 0) {
 						if (rc.getLocation().isAdjacentTo(neutralBot.location) && rc.isCoreReady()) { //Magic indicating adjacent bot
 							rc.activate(neutralBot.location);
@@ -162,19 +163,30 @@ public class Archon implements Role {
 					}
 				}	
 				//TEST Code
-				if (!turtle && rc.getRoundNum() > 1200 && rc.getRoundNum() < 1220) {
-					rc.broadcastMessageSignal(Comms.createHeader(Comms.ATTACK_ENEMY), Comms.encodeLocation(enemyArchons[0]), 500);
-					target = enemyArchons[0];
+				//Get closest den
+				if (rc.getRoundNum() % 3 == 0) {
+					getClosestDen();
 				}
-				if (!turtle && rc.getRoundNum() > 1350 && rc.getRoundNum() < 1355) {
-					rc.broadcastMessageSignal(Comms.createHeader(Comms.ATTACK_ENEMY), Comms.encodeLocation(enemyArchons[2]), 500);
-					target = enemyArchons[2];
-				}
-				if (!turtle && rc.getRoundNum() > 1500 && rc.getRoundNum() < 1505) {
-					rc.broadcastMessageSignal(Comms.createHeader(Comms.ATTACK_ENEMY), Comms.encodeLocation(enemyArchons[1]), 500);
-					target = enemyArchons[1];
+				//Remove destroyed dens
+				//TODO Make cheaper
+				if (rc.getRoundNum() % 3 == 1) {
+					for (int i=0; i<dens.size(); i++) {
+						MapLocation den = dens.get(i);
+						//Check to see if den can't be sensed anymore
+						if (rc.canSenseLocation(den) && rc.senseRobotAtLocation(den) == null) {
+							dens.remove(i);
+							closeDen = null;
+						}
+					}
 				}
 				
+				//Send the troops to destroy dens
+				if (rc.getRoundNum() > 300 && rc.getRoundNum() % 40 == 1 && closeDen != null) {
+					rc.broadcastMessageSignal(Comms.createHeader(Comms.ATTACK_ENEMY), Comms.encodeLocation(closeDen), 300);
+					rc.broadcastMessageSignal(Comms.createHeader(Comms.TURRET_MOVE), Comms.encodeLocation(closeDen), 300);
+				}				
+				
+				//Move towards target
 				if (target != null) {
 					prevDirection = Utility.tryToMove(rc, rc.getLocation().directionTo(target), prevDirection);
 				}
@@ -209,12 +221,14 @@ public class Archon implements Role {
 					}
 				}
 				
-				if (Utility.chance(rand, .17) && rc.getTeamParts() > RobotType.TURRET.partCost && !turtle) {
-					if (Utility.chance(rand, .5)) {
+				if (Utility.chance(rand, .2) && rc.getTeamParts() > RobotType.TURRET.partCost && !turtle) {
+					if (Utility.chance(rand, .33)) {
 						tryToBuild(RobotType.SOLDIER);
 					}
-					else{
+					else if (Utility.chance(rand, .5)){
 						tryToBuild(RobotType.GUARD);
+					} else {
+						tryToBuild(RobotType.TURRET);
 					}
 				}
 				
@@ -346,6 +360,22 @@ public class Archon implements Role {
 			}
 		}
 		if(reconRequestTimeout > 0) reconRequestTimeout -= 1;
+	}
+	
+	/**
+	 * Propagates closest den via side effects
+	 */
+	private void getClosestDen() {
+		closeDen = null;
+		int denDistance = 1000000;
+		for (int i=0; i<dens.size(); i++) {
+			MapLocation den = dens.get(i);
+			int distance = den.distanceSquaredTo(rc.getLocation());
+			if (distance < denDistance) {
+				denDistance = distance;
+				closeDen = den;
+			}
+		}
 	}
 	
 	/**
