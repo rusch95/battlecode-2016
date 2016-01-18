@@ -11,6 +11,8 @@ import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import battlecode.common.Signal;
 import battlecode.common.Team;
+import battlecode.common.ZombieCount;
+import battlecode.common.ZombieSpawnSchedule;
 
 public class Soldier implements Role {
 	private final RobotController rc;
@@ -34,6 +36,7 @@ public class Soldier implements Role {
     private boolean beingSniped = false;
     private boolean sentMessage = false;
     private boolean attackDen = false;
+    private boolean zombieSpawnSoon = false;
     
     //Global Locations
     private MapLocation base;
@@ -98,6 +101,17 @@ public class Soldier implements Role {
 					}
 				}			
 				
+				for (int i=0;i<5;i++) {
+					ZombieSpawnSchedule sched = rc.getZombieSpawnSchedule();
+					ZombieCount[] zombiesOnRound = sched.getScheduleForRound(rc.getRoundNum() + i);
+					if (zombiesOnRound.length > 0) {
+						zombieSpawnSoon = true;
+						break;
+					} else {
+						zombieSpawnSoon = false;
+					}
+				}
+				
 				//Amortizes bytecode usage
 				if (!rc.isCoreReady()) {
 					handleMessages();
@@ -113,6 +127,12 @@ public class Soldier implements Role {
 								dirToGo = rc.getLocation().directionTo(enemiesWithinRange[0].location).opposite();
 							}
 							prevDirection=Utility.tryToMove(rc, dirToGo, prevDirection);
+							
+							//TODO Change to explict den location instead of goal
+				    } else if (attackDen && zombieSpawnSoon && currentOrderedGoal != null) {
+				    	prevDirection = Utility.tryToMove(rc, rc.getLocation().directionTo(currentOrderedGoal).opposite(), prevDirection);	
+				    			
+							
 				    } else if (enemiesSeen.length > 0) {
 				    	//TODO Optimize. Implement switch to just stay out of range while followed, else stay just out of range.
 				    	//Can probably implement by having them stand still if enemy still, else run along at rate of enemy
@@ -142,7 +162,7 @@ public class Soldier implements Role {
 				    			attackDen = false;
 				    		}
 				    	}
-						
+					
 				    } else if (currentBasicGoal != null) {
 						dirToGo = rc.getLocation().directionTo(currentBasicGoal);
 						prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);

@@ -25,7 +25,9 @@ public class Turret implements Role {
     private boolean targetUpdated;
     private MapLocation currentOrderedGoal;
     
+    //Global Flags
     private boolean stopMoving = false;
+    private boolean attackDen = false;
     
     private int minX = 0;
     private int maxX = Integer.MAX_VALUE;
@@ -149,7 +151,7 @@ public class Turret implements Role {
 							if (rc.getType() == RobotType.TURRET) {
 								rc.pack();
 								currentOrderedGoal = loc;
-					}
+							}	
 							break;
 						case Comms.TURRET_STOP:
 							if (rc.getType() == RobotType.TTM) {
@@ -157,6 +159,12 @@ public class Turret implements Role {
 								rc.unpack();
 							}
 							break;
+						case Comms.ATTACK_DEN:
+							if (rc.getType() == RobotType.TURRET) {
+								attackDen = true;
+								currentOrderedGoal = loc;
+								rc.pack();
+							}
 					}
 				}
 			}

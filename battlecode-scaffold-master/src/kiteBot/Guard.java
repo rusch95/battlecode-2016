@@ -11,6 +11,8 @@ import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import battlecode.common.Signal;
 import battlecode.common.Team;
+import battlecode.common.ZombieCount;
+import battlecode.common.ZombieSpawnSchedule;
 
 public class Guard implements Role {
 	private final RobotController rc;
@@ -53,6 +55,7 @@ public class Guard implements Role {
     private boolean beingSniped = false;
     private boolean sentMessage = false;
     private boolean attackDen = false;
+    private boolean zombieSpawnSoon = false;
     
     //Global Locations
     private MapLocation base;
@@ -87,6 +90,16 @@ public class Guard implements Role {
 				//Change some flags if necessary
 				beingAttacked = (rc.getHealth() < prevHealth);
 				beingSniped = (enemiesSeen.length == 0 && beingAttacked);
+				for (int i=0;i<5;i++) {
+					ZombieSpawnSchedule sched = rc.getZombieSpawnSchedule();
+					ZombieCount[] zombiesOnRound = sched.getScheduleForRound(rc.getRoundNum() + i);
+					if (zombiesOnRound.length > 0) {
+						zombieSpawnSoon = true;
+						break;
+					} else {
+						zombieSpawnSoon = false;
+					}
+				}
 				
 				RobotInfo targetEnemy = null;
 				if(enemiesWithinRange.length > 0 && rc.isWeaponReady()) { //We're in combat
@@ -95,6 +108,8 @@ public class Guard implements Role {
 						rc.attackLocation(targetEnemy.location);
 					} 
 				}
+				
+				//Update whether zombies will spawn in next n rounds
 				
 				//Amortizes bytecode usage
 				if (!rc.isCoreReady()) {
@@ -111,11 +126,16 @@ public class Guard implements Role {
 							prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
 						}
 					
+						//TODO Change to explict den location instead of goal
+				    } else if (attackDen && zombieSpawnSoon && currentOrderedGoal != null) {
+				    	prevDirection = Utility.tryToMove(rc, rc.getLocation().directionTo(currentOrderedGoal).opposite(), prevDirection);	
+						
 				    } else if (enemiesSeen.length > 0) {
 							//Move towards enemy
 							RobotInfo closeEnemy = Utility.getClosest(enemiesSeen, rc.getLocation());
 							prevDirection = Utility.tryToMove(rc, rc.getLocation().directionTo(closeEnemy.location), prevDirection);
-					
+						
+					//TODO Replace with comm and scout orders
 				    } else if (currentOrderedGoal != null && rc.canSense(currentOrderedGoal)) {
 				    	if (attackDen) {
 				    		if (rc.senseRobotAtLocation(currentOrderedGoal) == null) {

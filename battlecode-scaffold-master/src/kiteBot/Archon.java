@@ -93,7 +93,7 @@ public class Archon implements Role {
 			int maxDistance = 0;
 			MapLocation turtlePos = null;
 			for (MapLocation archonPos : myArchons) {
-				//Figure out which archon is the furthest from the center
+				//Figure out which archon is the farthest from the center
 				int distance = archonPos.distanceSquaredTo(center);
 				if (distance > maxDistance) {
 					maxDistance = distance;
@@ -184,10 +184,11 @@ public class Archon implements Role {
 				if (rc.getRoundNum() > 300 && rc.getRoundNum() % 40 == 1 && closeDen != null) {
 					rc.broadcastMessageSignal(Comms.createHeader(Comms.ATTACK_ENEMY), Comms.encodeLocation(closeDen), 300);
 					rc.broadcastMessageSignal(Comms.createHeader(Comms.TURRET_MOVE), Comms.encodeLocation(closeDen), 300);
+					target = closeDen;
 				}				
 				
 				//Move towards target
-				if (target != null) {
+				if (target != null && rc.getLocation().distanceSquaredTo(target) > 25) {
 					prevDirection = Utility.tryToMove(rc, rc.getLocation().directionTo(target), prevDirection);
 				}
 				
@@ -222,10 +223,10 @@ public class Archon implements Role {
 				}
 				
 				if (Utility.chance(rand, .2) && rc.getTeamParts() > RobotType.TURRET.partCost && !turtle) {
-					if (Utility.chance(rand, .33)) {
+					if (Utility.chance(rand, .5)) {
 						tryToBuild(RobotType.SOLDIER);
 					}
-					else if (Utility.chance(rand, .5)){
+					else if (Utility.chance(rand, .7)){
 						tryToBuild(RobotType.GUARD);
 					} else {
 						tryToBuild(RobotType.TURRET);
@@ -256,7 +257,7 @@ public class Archon implements Role {
 					}
 				}
 				
-				int[] slice = {-1,0,1};
+				int[] slice = {0,};
 				Utility.Tuple<Direction, Double> dpsDirTuple = Utility.getDirectionOfMostDPS(enemies, rc, slice);
 				if (dpsDirTuple != null) {
 					Direction dirDps = dpsDirTuple.x;
