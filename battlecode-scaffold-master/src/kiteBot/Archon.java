@@ -201,7 +201,7 @@ public class Archon implements Role {
 				
 				//Send the troops to destroy dens
 				int MIN_FRIENDS_TO_SIEGE = 10;
-				int MAX_DISTANCE_TO_ATTACK = 40;
+				int MAX_DISTANCE_TO_ATTACK = 200;
 				if (closeDen != null
 						&& (closeDen.distanceSquaredTo(rc.getLocation()) > MAX_DISTANCE_TO_ATTACK || rc.getRoundNum() > 2000) 
 						&& rc.getRoundNum() > 300 
