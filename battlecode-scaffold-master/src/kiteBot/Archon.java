@@ -183,7 +183,7 @@ public class Archon implements Role {
 				
 				//Update the closest den for sieging purposes
 				if (!turtle && rc.getRoundNum() % 3 == 0) {
-					getClosestDen();
+					closeDen = getClosestDen();
 				}
 				
 				//Remove destroyed dens
@@ -201,10 +201,12 @@ public class Archon implements Role {
 				
 				//Send the troops to destroy dens
 				int MIN_FRIENDS_TO_SIEGE = 10;
-				int MAX_DISTANCE_TO_ATTACK = 40;
-				if (closeDen != null && (closeDen.distanceSquaredTo(rc.getLocation()) > MAX_DISTANCE_TO_ATTACK || rc.getRoundNum() > 2000) 
+				int MAX_DISTANCE_TO_ATTACK = 200; //Becomes infinite at R#2000
+				if (closeDen != null
+						&& (closeDen.distanceSquaredTo(rc.getLocation()) < MAX_DISTANCE_TO_ATTACK || rc.getRoundNum() > 2000) 
 						&& rc.getRoundNum() > 300 
-						&& rc.getRoundNum() % 40 == 1 && friends.length > MIN_FRIENDS_TO_SIEGE) {
+						&& rc.getRoundNum() % 40 == 1
+						&& friends.length > MIN_FRIENDS_TO_SIEGE) {
 					rc.broadcastMessageSignal(Comms.createHeader(Comms.ATTACK_DEN), Comms.encodeLocation(closeDen), 1000);
 					rc.broadcastMessageSignal(Comms.createHeader(Comms.TURRET_MOVE), Comms.encodeLocation(closeDen), 1000);
 					target = closeDen;
@@ -345,19 +347,22 @@ public class Archon implements Role {
 	}
 	
 	/**
-	 * Propagates closest den via side effects
+	 * Returns the location of the closest den to the Archon
+	 * @return MapLocation closestDen
 	 */
-	private void getClosestDen() {
-		closeDen = null;
-		int denDistance = 1000000;
+	private MapLocation getClosestDen() {
+		MapLocation closestDen = null;
+		MapLocation myLocation = rc.getLocation();
+		int denDistance = Integer.MAX_VALUE;
 		for (int i=0; i<dens.size(); i++) {
 			MapLocation den = dens.get(i);
-			int distance = den.distanceSquaredTo(rc.getLocation());
+			int distance = den.distanceSquaredTo(myLocation);
 			if (distance < denDistance) {
 				denDistance = distance;
-				closeDen = den;
+				closestDen = den;
 			}
 		}
+		return closestDen;
 	}
 	
 	/**
