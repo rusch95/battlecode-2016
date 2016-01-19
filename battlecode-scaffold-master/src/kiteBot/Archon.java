@@ -203,7 +203,7 @@ public class Archon implements Role {
 				int MIN_FRIENDS_TO_SIEGE = 10;
 				int MAX_DISTANCE_TO_ATTACK = 200; //Becomes infinite at R#2000
 				if (closeDen != null
-						&& (closeDen.distanceSquaredTo(rc.getLocation()) > MAX_DISTANCE_TO_ATTACK || rc.getRoundNum() > 2000) 
+						&& (closeDen.distanceSquaredTo(rc.getLocation()) < MAX_DISTANCE_TO_ATTACK || rc.getRoundNum() > 2000) 
 						&& rc.getRoundNum() > 300 
 						&& rc.getRoundNum() % 40 == 1
 						&& friends.length > MIN_FRIENDS_TO_SIEGE) {
