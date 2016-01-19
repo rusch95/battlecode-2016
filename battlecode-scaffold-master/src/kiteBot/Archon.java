@@ -168,8 +168,7 @@ public class Archon implements Role {
 					if (partsValue / rc.getTeamParts() > GET_PARTS_THRESHOLD) {
 						prevDirection = Utility.tryToMove(rc, rc.getLocation().directionTo(partsLoc), prevDirection);
 					}
-				}	
-				
+				}
 				//If dps in direction too high, flee
 				int[] slice = {-1,0,1};
 				Utility.Tuple<Direction, Double> dpsDirTuple = Utility.getDirectionOfMostDPS(enemies, rc, slice);

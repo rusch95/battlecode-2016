@@ -45,7 +45,7 @@ public class Turret implements Role {
     
     //Constants
     private static final int NEED_RECON_RANGE = 8;
-    private static final int BROADCAST_RANGE = 16; //TODO Change to distance from archon, plus small factor
+    private static final int BROADCAST_RANGE = 30; //TODO Change to distance from archon, plus small factor
     private static final int MAX_RANGE = -1;
     
 	public Turret(RobotController rc){
@@ -84,6 +84,8 @@ public class Turret implements Role {
 			}
 			while(rc.getType() == RobotType.TTM) {
 				try {
+					//TODO Fix it so if turrets cant get within range they unpack anyways
+
 
 					if (rc.getLocation() == prevLocation) {
 						timeSittingStillAsTTM += 1;
@@ -93,7 +95,11 @@ public class Turret implements Role {
 					}
 					
 					this.prevLocation = rc.getLocation();
-					if (rc.isCoreReady() && makeRoom) {
+					
+					RobotInfo[] hostilesNearby = rc.senseHostileRobots(rc.getLocation(), -1);
+					if(hostilesNearby.length > 0) { //unpack if there are enemies nearby
+						rc.unpack();
+					} else if (rc.isCoreReady() && makeRoom) {
 						prevDirection=Utility.tryToMoveDontClear(rc, rc.getLocation().directionTo(currentOrderedGoal),prevDirection);
 					} else if (currentOrderedGoal != null && rc.getLocation().distanceSquaredTo(currentOrderedGoal) < RobotType.TURRET.sensorRadiusSquared) {
 						rc.setIndicatorString(0, ""+rc.getLocation().distanceSquaredTo(currentOrderedGoal));
