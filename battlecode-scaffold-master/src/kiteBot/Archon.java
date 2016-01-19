@@ -38,7 +38,7 @@ public class Archon implements Role {
     private int maxY = Integer.MAX_VALUE;
     
     //Magic numbers
-    private double DPS_RETREAT_THRESHOLD = 3;
+    private double DPS_RETREAT_THRESHOLD = 10;
     private double SHIT_BRICKS = 100;
     private double ACTIVATE_BOT_THRESHOLD = 10;
     private double GET_PARTS_THRESHOLD = .033;
@@ -123,12 +123,7 @@ public class Archon implements Role {
 				handleMessages();
 				scanArea();
 				
-				//Don't be in corner, fix
-				for (Direction dir : Direction.values()) {
-					if (!rc.onTheMap(rc.getLocation().add(dir))) {
-						prevDirection = Utility.tryToMove(rc, dir.opposite(), prevDirection);
-					}
-				}
+				RobotInfo[] enemies = rc.senseHostileRobots(rc.getLocation(), -1);
 				
 				//Handles getting parts and neutral bots
 				//TODO Decrease bytecode cost
@@ -153,10 +148,23 @@ public class Archon implements Role {
 					}
 				}	
 				
+				//If dps in direction too high, flee
+				int[] slice = {-1,0,1};
+				Utility.Tuple<Direction, Double> dpsDirTuple = Utility.getDirectionOfMostDPS(enemies, rc, slice);
+				if (dpsDirTuple != null) {
+					Direction dirDps = dpsDirTuple.x;
+					double dps = dpsDirTuple.y;
+					if (dps > DPS_RETREAT_THRESHOLD) {
+						fleeMode = (dps > SHIT_BRICKS);
+						prevDirection = Utility.tryToMove(rc, dirDps.opposite(), prevDirection);
+					}
+				}
 				
+				//Update the closest den for sieging purposes
 				if (!turtle && rc.getRoundNum() % 3 == 0) {
 					getClosestDen();
 				}
+				
 				//Remove destroyed dens
 				//TODO Make cheaper
 				if (rc.getRoundNum() % 3 == 1) {
@@ -182,6 +190,7 @@ public class Archon implements Role {
 					prevDirection = Utility.tryToMove(rc, rc.getLocation().directionTo(target), prevDirection);
 				}
 				
+				//Make recon for turrets
 				if(reconRequested) {
 					if(tryToBuild(RobotType.SCOUT)) {
 						rc.broadcastMessageSignal(Comms.createHeader(Comms.PLEASE_TARGET), Comms.encodeLocation(reconLocation), 2);
@@ -189,43 +198,15 @@ public class Archon implements Role {
 						reconRequested = false;
 					}
 				}
-				
-				
-				
+			
 				if (Utility.chance(rand, .33) && rc.getTeamParts() > RobotType.TURRET.partCost && turtle) {
-					if(nearbyBio < 3) {
-						tryToBuild(RobotType.GUARD);
-					}
-					else if(nearbyBio <= nearbyTurrets) {
-						if (Utility.chance(rand, .5)) {
-							tryToBuild(RobotType.SOLDIER);
-						}
-						else{
-							tryToBuild(RobotType.GUARD);
-						}
-					}
-					else if(Utility.chance(rand, 0.5)) {
-						tryToBuild(RobotType.TURRET);						
-					}
-					if(scoutsKilled > 0 && weNeedExplorers() && Utility.chance(rand, 0.2)) {
-						if(tryToBuild(RobotType.SCOUT)) scoutsKilled -= 1;
-					}
-				}
-				
+					turtleBuild();
+				}		
 				if (Utility.chance(rand, .2) && rc.getTeamParts() > RobotType.TURRET.partCost && !turtle) {
-					if (Utility.chance(rand, .5)) {
-						tryToBuild(RobotType.SOLDIER);
-					}
-					else if (Utility.chance(rand, .7)){
-						tryToBuild(RobotType.GUARD);
-					} else {
-						tryToBuild(RobotType.TURRET);
-					}
+					nonTurtleBuild();
 				}
 				
 		        healAlly();
-		        
-				RobotInfo[] enemies = rc.senseHostileRobots(rc.getLocation(), -1);
 				
 				if (enemies.length == 0 && beingAttacked) {
 					beingSniped = true;
@@ -247,14 +228,10 @@ public class Archon implements Role {
 					}
 				}
 				
-				int[] slice = {0,};
-				Utility.Tuple<Direction, Double> dpsDirTuple = Utility.getDirectionOfMostDPS(enemies, rc, slice);
-				if (dpsDirTuple != null) {
-					Direction dirDps = dpsDirTuple.x;
-					double dps = dpsDirTuple.y;
-					if (dps > DPS_RETREAT_THRESHOLD) {
-						fleeMode = (dps > SHIT_BRICKS);
-						prevDirection = Utility.tryToMove(rc, dirDps.opposite(), prevDirection);
+				//Don't be in corner, fix
+				for (Direction dir : Direction.values()) {
+					if (!rc.onTheMap(rc.getLocation().add(dir))) {
+						prevDirection = Utility.tryToMove(rc, dir.opposite(), prevDirection);
 					}
 				}
 				
@@ -476,6 +453,35 @@ public class Archon implements Role {
 		if (weakestFriend != null) {
         	rc.repair(weakestFriend.location);
         }
+	}
+	private void turtleBuild() throws GameActionException {
+		if(nearbyBio < 3) {
+			tryToBuild(RobotType.GUARD);
+		}
+		else if(nearbyBio <= nearbyTurrets) {
+			if (Utility.chance(rand, .5)) {
+				tryToBuild(RobotType.SOLDIER);
+			}
+			else{
+				tryToBuild(RobotType.GUARD);
+			}
+		}
+		else if(Utility.chance(rand, 0.5)) {
+			tryToBuild(RobotType.TURRET);						
+		}
+		if(scoutsKilled > 0 && weNeedExplorers() && Utility.chance(rand, 0.2)) {
+			if(tryToBuild(RobotType.SCOUT)) scoutsKilled -= 1;
+		}
+	}
+	private void nonTurtleBuild() throws GameActionException {
+		if (Utility.chance(rand, .5)) {
+			tryToBuild(RobotType.SOLDIER);
+		}
+		else if (Utility.chance(rand, .7)){
+			tryToBuild(RobotType.GUARD);
+		} else {
+			tryToBuild(RobotType.TURRET);
+		}
 	}
 	
 }
