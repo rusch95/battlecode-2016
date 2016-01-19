@@ -48,6 +48,7 @@ public class Archon implements Role {
     private Direction prevDirection = Direction.NONE;
     private MapLocation lastSeenEnemyLoc = null;
     private MapLocation startingPos;
+    private int failToBuildCount;
 
     
     //Global Flags
@@ -202,15 +203,19 @@ public class Archon implements Role {
 				//Send the troops to destroy dens
 				int MIN_FRIENDS_TO_SIEGE = 10;
 				int MAX_DISTANCE_TO_ATTACK = 40;
-				if (rc.getRoundNum() > 300 && rc.getRoundNum() % 40 == 1 && friends.length > MIN_FRIENDS_TO_SIEGE && closeDen != null) {
+				if (closeDen != null && (closeDen.distanceSquaredTo(rc.getLocation()) > MAX_DISTANCE_TO_ATTACK || rc.getRoundNum() > 2000) 
+						&& rc.getRoundNum() > 300 
+						&& rc.getRoundNum() % 40 == 1 && friends.length > MIN_FRIENDS_TO_SIEGE) {
 					rc.broadcastMessageSignal(Comms.createHeader(Comms.ATTACK_DEN), Comms.encodeLocation(closeDen), 1000);
 					rc.broadcastMessageSignal(Comms.createHeader(Comms.TURRET_MOVE), Comms.encodeLocation(closeDen), 1000);
 					target = closeDen;
 				}				
 				
+				//Make units blocking building move out of the way
 				if (rc.getTeamParts() > 300) {
 					RobotInfo[] adjacent = rc.senseNearbyRobots(2); 
-					if (adjacent.length > 7) {
+					if (adjacent.length > 7 || failToBuildCount > 5) {
+						failToBuildCount = 0;
 						rc.broadcastMessageSignal(Comms.MAKE_ROOM, 0, 2);
 					}
 				}
@@ -228,12 +233,12 @@ public class Archon implements Role {
 						reconRequested = false;
 					}
 				}
-			
+
 				if (Utility.chance(rand, .33) && rc.getTeamParts() > RobotType.TURRET.partCost && turtle) {
-					turtleBuild();
+					if(!turtleBuild()) failToBuildCount++;
 				}		
 				if (Utility.chance(rand, .2) && rc.getTeamParts() > RobotType.TURRET.partCost && !turtle) {
-					nonTurtleBuild();
+					if(!nonTurtleBuild()) failToBuildCount++;
 				}
 				
 		        healAlly();
@@ -464,34 +469,39 @@ public class Archon implements Role {
         	rc.repair(weakestFriend.location);
         }
 	}
-	private void turtleBuild() throws GameActionException {
+	private boolean turtleBuild() throws GameActionException {
+		boolean builtSomething = false;
 		if(nearbyBio < 3) {
-			tryToBuild(RobotType.GUARD);
+			builtSomething = tryToBuild(RobotType.GUARD);
 		}
 		else if(nearbyBio <= nearbyTurrets) {
 			if (Utility.chance(rand, .5)) {
-				tryToBuild(RobotType.SOLDIER);
+				builtSomething = tryToBuild(RobotType.SOLDIER);
 			}
 			else{
-				tryToBuild(RobotType.GUARD);
+				builtSomething = tryToBuild(RobotType.GUARD);
 			}
 		}
 		else if(Utility.chance(rand, 0.5)) {
-			tryToBuild(RobotType.TURRET);						
+			builtSomething = tryToBuild(RobotType.TURRET);						
 		}
 		if(scoutsKilled > 0 && weNeedExplorers() && Utility.chance(rand, 0.2)) {
-			if(tryToBuild(RobotType.SCOUT)) scoutsKilled -= 1;
+			builtSomething = tryToBuild(RobotType.SCOUT);
+			if(builtSomething) scoutsKilled -= 1;
 		}
+		return builtSomething;
 	}
-	private void nonTurtleBuild() throws GameActionException {
+	private boolean nonTurtleBuild() throws GameActionException {
+		boolean builtSomething = false;
 		if (Utility.chance(rand, .5)) {
-			tryToBuild(RobotType.SOLDIER);
+			builtSomething = tryToBuild(RobotType.SOLDIER);
 		}
 		else if (Utility.chance(rand, .7)){
-			tryToBuild(RobotType.GUARD);
+			builtSomething = tryToBuild(RobotType.GUARD);
 		} else {
-			tryToBuild(RobotType.TURRET);
+			builtSomething = tryToBuild(RobotType.TURRET);
 		}
+		return builtSomething;
 	}
 	
 }
