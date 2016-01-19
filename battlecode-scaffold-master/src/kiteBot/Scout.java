@@ -65,6 +65,7 @@ public class Scout implements Role {
 			try {
 				rc.setIndicatorDot(target, 0, 150, 0);
 				handleMessages();
+				Utility.cyanidePill(rc);
 				if(state == EXPLORING) {
 					rc.setIndicatorString(0, "I am EXPLORING");
 					scan();
@@ -81,7 +82,7 @@ public class Scout implements Role {
 					if(rc.getLocation().distanceSquaredTo(target) > 2) {
 						moveTowardsTarget();
 					}
-					findTarget(); //Time that this is done doesn't matter
+					findTarget();
 				}
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());

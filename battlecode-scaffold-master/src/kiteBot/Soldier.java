@@ -73,7 +73,7 @@ public class Soldier implements Role {
 		this.otherTeam = myTeam.opponent();
 		this.base = rc.getLocation();
 		this.prevHealth = rc.getHealth();
-		this.myType = rc.getType();
+		this.myType = RobotType.SOLDIER;
 		this.attackRadius = myType.attackRadiusSquared;
 		this.myArchons = rc.getInitialArchonLocations(myTeam);
 		this.enemyArchons = rc.getInitialArchonLocations(otherTeam);
@@ -94,16 +94,16 @@ public class Soldier implements Role {
 				beingAttacked = (rc.getHealth() < prevHealth);
 				beingSniped = (enemiesSeen.length == 0 && beingAttacked);
 				
-				Utility.cyanidePill(rc);
-				
 				//Attack code
 				RobotInfo targetEnemy = null;
-				if(enemiesWithinRange.length > 0 && rc.isWeaponReady()) { //We're in combat
+				if(enemiesWithinRange.length > 0) { //We're in combat
 					targetEnemy = Utility.getTarget(enemiesWithinRange, 0, rc.getLocation());
-					if( targetEnemy != null) {
+					if( targetEnemy != null && rc.isWeaponReady()) {
 						rc.attackLocation(targetEnemy.location);
 					}
 				}			
+
+				Utility.cyanidePill(rc);
 				
 				//Amortizes bytecode usage
 				if (!rc.isCoreReady()) {
@@ -111,38 +111,39 @@ public class Soldier implements Role {
 				} else {
 					//Movement code
 					Direction dirToGo = Direction.NONE;
-				    if (rc.getHealth() / myType.maxHealth < RETREAT_HEALTH_PERCENT) {
-				    	//Retreat
-				    	//TODO Optimize
-							if (Utility.chance(rand, .7)) {
-								dirToGo = rc.getLocation().directionTo(base);
-							} else if (Utility.chance(rand, .7) && enemiesWithinRange.length > 0) {
-								dirToGo = rc.getLocation().directionTo(enemiesWithinRange[0].location).opposite();
-							}
-							prevDirection=Utility.tryToMove(rc, dirToGo, prevDirection);	
-							
-				    } else if (enemiesSeen.length > 0) {
+				    if (enemiesSeen.length > 0) {
 				    	//TODO Optimize. Implement switch to just stay out of range while followed, else stay just out of range.
 				    	//Can probably implement by having them stand still if enemy still, else run along at rate of enemy
-						RobotInfo target = Utility.getTarget(enemiesSeen, 0, rc.getLocation());
-						Direction dirToTarget = rc.getLocation().directionTo(target.location);
-						int distanceToTarget = rc.getLocation().distanceSquaredTo(target.location);
+				    	MapLocation myLocation = rc.getLocation();
+				    	if(targetEnemy == null) targetEnemy = Utility.getTarget(enemiesSeen, 0, rc.getLocation());
+						Direction dirToTarget = myLocation.directionTo(targetEnemy.location);
+						int distanceToTarget = myLocation.distanceSquaredTo(targetEnemy.location);
+						int kitedDistanceToTarget = myLocation.add(dirToTarget.opposite()).distanceSquaredTo(targetEnemy.location);
 						//Currently, this keeps them just in range
-						if (distanceToTarget <= (rc.getType().attackRadiusSquared) && target.type != RobotType.ZOMBIEDEN && !protectingBase && !beingSniped) {
+						if (kitedDistanceToTarget <= (RobotType.SOLDIER.attackRadiusSquared) && targetEnemy.type != RobotType.ZOMBIEDEN && !protectingBase && !beingSniped) {
 							//KIIITTTEEEE
-							Direction dirAway = dirToTarget.opposite();
-							prevDirection=Utility.tryToMove(rc, dirAway, prevDirection);
-							dirToGo = dirAway;
+							dirToGo = dirToTarget.opposite();
+							prevDirection=Utility.tryToMove(rc, dirToGo, prevDirection);
 							
-						} else if (target.type == RobotType.ZOMBIEDEN && distanceToTarget < 10) {
+						} else if (targetEnemy.type == RobotType.ZOMBIEDEN && distanceToTarget < 10) {
 							//Do nothing
 							
-						} else {
-							//Get closer
+						} else if (distanceToTarget > RobotType.SOLDIER.attackRadiusSquared){
+							//Get closer if we can't hit them
 							prevDirection=Utility.tryToMove(rc, dirToTarget,prevDirection);
 							dirToGo = dirToTarget;
 						}
 					
+				    } else if (rc.getHealth() / myType.maxHealth < RETREAT_HEALTH_PERCENT) {
+				    	//Retreat
+				    	//TODO Optimize
+							if (Utility.chance(rand, .7)) {
+								dirToGo = rc.getLocation().directionTo(base);
+							} else if (enemiesWithinRange.length > 0) {
+								dirToGo = rc.getLocation().directionTo(enemiesWithinRange[0].location).opposite();
+							}
+							prevDirection=Utility.tryToMove(rc, dirToGo, prevDirection);	
+							
 				    } else if (currentOrderedGoal != null && rc.canSense(currentOrderedGoal)) {
 				    	if (attackDen) {
 				    		RobotInfo robotAtLocation = rc.senseRobotAtLocation(currentOrderedGoal);
