@@ -38,7 +38,7 @@ public class Archon implements Role {
     private int maxY = Integer.MAX_VALUE;
     
     //Magic numbers
-    private double DPS_RETREAT_THRESHOLD = 10;
+    private double DPS_RETREAT_THRESHOLD = 3;
     private double SHIT_BRICKS = 100;
     private double ACTIVATE_BOT_THRESHOLD = 10;
     private double GET_PARTS_THRESHOLD = .033;
@@ -170,7 +170,7 @@ public class Archon implements Role {
 					}
 				}
 				//If dps in direction too high, flee
-				int[] slice = {-1,0,1};
+				int[] slice = {0};
 				Utility.Tuple<Direction, Double> dpsDirTuple = Utility.getDirectionOfMostDPS(enemies, rc, slice);
 				if (dpsDirTuple != null) {
 					Direction dirDps = dpsDirTuple.x;

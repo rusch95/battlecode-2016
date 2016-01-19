@@ -22,6 +22,7 @@ public class Turret implements Role {
     private Direction prevDirection = Direction.NONE;
     private MapLocation prevLocation;
     
+    private MapLocation squadArchonLocation;
     private MapLocation targetEnemy;
     private boolean targetUpdated;
     private MapLocation currentOrderedGoal;
@@ -55,7 +56,9 @@ public class Turret implements Role {
 		this.otherTeam = myTeam.opponent();
 		this.prevLocation = rc.getLocation();
 		RobotInfo[] friends = rc.senseNearbyRobots(MAX_RANGE, myTeam);
-		squadArchon = Utility.getBotOfType(friends, RobotType.ARCHON, rand, rc).ID;
+		RobotInfo archon = Utility.getBotOfType(friends, RobotType.ARCHON, rand, rc);
+		squadArchon = archon.ID;
+		squadArchonLocation = archon.location;
 		timeSittingStillAsTTM = 0;
 	}
 	
@@ -100,7 +103,7 @@ public class Turret implements Role {
 					if(hostilesNearby.length > 0) { //unpack if there are enemies nearby
 						rc.unpack();
 					} else if (rc.isCoreReady() && makeRoom) {
-						prevDirection=Utility.tryToMoveDontClear(rc, rc.getLocation().directionTo(currentOrderedGoal),prevDirection);
+						prevDirection=Utility.tryToMoveDontClear(rc, rc.getLocation().directionTo(squadArchonLocation).opposite(),prevDirection);
 					} else if (currentOrderedGoal != null && rc.getLocation().distanceSquaredTo(currentOrderedGoal) < RobotType.TURRET.sensorRadiusSquared) {
 						rc.setIndicatorString(0, ""+rc.getLocation().distanceSquaredTo(currentOrderedGoal));
 						handleMessages();
@@ -143,6 +146,9 @@ public class Turret implements Role {
 					int code = Comms.getMessageCode(contents[0]);
 					int aux = Comms.getAux(contents[0]);
 					MapLocation loc = Comms.decodeLocation(contents[1]);
+					if (id == squadArchon) {
+						squadArchonLocation = message.getLocation(); //Update squad archon location
+					}
 					switch (code){
 						case Comms.TURRET_ATTACK_HERE:
 								if(loc.distanceSquaredTo(rc.getLocation()) <= RobotType.TURRET.attackRadiusSquared) {
