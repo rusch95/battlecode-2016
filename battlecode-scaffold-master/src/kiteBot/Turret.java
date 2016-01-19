@@ -45,7 +45,7 @@ public class Turret implements Role {
     
     //Constants
     private static final int NEED_RECON_RANGE = 8;
-    private static final int BROADCAST_RANGE = 16; //TODO Change to distance from archon, plus small factor
+    private static final int BROADCAST_RANGE = 30; //TODO Change to distance from archon, plus small factor
     private static final int MAX_RANGE = -1;
     
 	public Turret(RobotController rc){
