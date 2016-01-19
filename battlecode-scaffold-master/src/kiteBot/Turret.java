@@ -75,7 +75,11 @@ public class Turret implements Role {
 			while(rc.getType() == RobotType.TTM) {
 				try {
 					//TODO Fix it so if turrets cant get within range they unpack anyways
-					if (currentOrderedGoal != null && rc.getLocation().distanceSquaredTo(currentOrderedGoal) < RobotType.TURRET.sensorRadiusSquared) {
+					RobotInfo[] hostilesNearby = rc.senseHostileRobots(rc.getLocation(), -1);
+					if(hostilesNearby.length > 0) { //unpack if there are enemies nearby
+						rc.unpack();
+					}
+					else if (currentOrderedGoal != null && rc.getLocation().distanceSquaredTo(currentOrderedGoal) < RobotType.TURRET.sensorRadiusSquared) {
 						rc.setIndicatorString(0, ""+rc.getLocation().distanceSquaredTo(currentOrderedGoal));
 						handleMessages();
 						rc.unpack();		
