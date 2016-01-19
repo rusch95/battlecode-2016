@@ -82,7 +82,7 @@ public class Scout implements Role {
 					if(rc.getLocation().distanceSquaredTo(target) > 2) {
 						moveTowardsTarget();
 					}
-					findTarget(); //Time that this is done doesn't matter
+					findTarget();
 				}
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
