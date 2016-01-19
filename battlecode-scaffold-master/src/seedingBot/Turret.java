@@ -12,7 +12,7 @@ import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import battlecode.common.Signal;
 import battlecode.common.Team;
-import kiteBot.Utility;
+import seedingBot.Utility;
 
 public class Turret implements Role {
 	private final RobotController rc;
