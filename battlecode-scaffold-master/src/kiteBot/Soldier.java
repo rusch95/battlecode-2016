@@ -85,6 +85,10 @@ public class Soldier implements Role {
 	public void run() {
 		while(true){
 			try {
+				rc.setIndicatorString(0, ""+squadArchon);
+				if (base != null) {
+					rc.setIndicatorString(1, "Base X: "+base.x+" Y: "+base.y);
+				}
 				//TODO Refactor to compute these only if necessary
 				RobotInfo[] enemiesSeen = rc.senseHostileRobots(rc.getLocation(), MAX_RANGE);
 				RobotInfo[] friendsSeen = rc.senseNearbyRobots(MAX_RANGE, myTeam);
@@ -192,7 +196,10 @@ public class Soldier implements Role {
 			if(message.getTeam().equals(myTeam)){ //Friendly message
 				int[] contents = message.getMessage();
 				int id = message.getID();
-				if (id == squadArchon) base = message.getLocation(); //Update squad archon location
+				rc.setIndicatorString(2, squadArchon + "should sometimes equal " + id);
+				if (id == squadArchon) {
+					base = message.getLocation(); //Update squad archon location
+				}
 				//TODO Include ignore bit to lower melee overhead
 				if(contents != null) { //Not a basic signal
 					int code = Comms.getMessageCode(contents[0]);
