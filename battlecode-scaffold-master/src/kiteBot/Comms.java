@@ -53,6 +53,7 @@ public class Comms {
 
 	public static final int TURRET_MOVE = 38;
 	public static final int TURRET_STOP = 39;
+	public static final int MAKE_ROOM = 41;
 	
 	/**
 	 * Creates the first int of a message from the code digits and the aux digits
