@@ -105,15 +105,6 @@ public class Archon implements Role {
 			tryToBuild(RobotType.SCOUT);
 			
 			ZombieSpawnSchedule schedule = rc.getZombieSpawnSchedule();
-			int[] rounds = schedule.getRounds();
-			if (turtle) {
-				for (int round:rounds) {
-					ZombieCount[] counts = schedule.getScheduleForRound(round);
-					for (ZombieCount count : counts) {
-						System.out.println("Round " + round + "- Number of zombies: " + count.getCount() + " Type: " + String.valueOf(count.getType()));
-					}
-				}
-			}
 			
 		} catch (Exception e) {
             System.out.println(e.getMessage());
@@ -162,12 +153,8 @@ public class Archon implements Role {
 					}
 				}	
 				
-				//TEST Code
-				//Get closest den
-				if (rc.getRoundNum() > 1000) {
-					closeDen = enemyArchons[0];
-				}
-				if (rc.getRoundNum() % 3 == 0) {
+				
+				if (!turtle && rc.getRoundNum() % 3 == 0) {
 					getClosestDen();
 				}
 				//Remove destroyed dens
