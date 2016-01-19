@@ -178,10 +178,8 @@ public class Scout implements Role {
 			else if(hostile.type.equals(RobotType.ARCHON) && !enemyArchons.contains(hostile.location)) { //Enemy Archon sighted TODO: make the archon tracking smarter (by ids or something)
 				enemyArchons.add(hostile.location);
 				rc.broadcastMessageSignal(Comms.createHeader(Comms.ENEMY_ARCHON_SIGHTED), Comms.encodeLocation(hostile.location), broadcastDistance());
-			}
-			
+			}	
 		}
-		
 	}
 	
 	/**

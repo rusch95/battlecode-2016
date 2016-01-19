@@ -149,8 +149,7 @@ public class Archon implements Role {
 					Utility.Tuple<RobotInfo, Double> neutralBotTup = searchForNeutral();
 					RobotInfo neutralBot = neutralBotTup.x;
 					double neutralValue = neutralBotTup.y;
-					rc.setIndicatorString(1, "partsValue: "+partsValue);
-					rc.setIndicatorString(2, "I am a turtle: "+String.valueOf(turtle));
+
 					if (neutralValue != 0) {
 						if (rc.getLocation().isAdjacentTo(neutralBot.location) && rc.isCoreReady()) { //Magic indicating adjacent bot
 							rc.activate(neutralBot.location);
@@ -162,8 +161,12 @@ public class Archon implements Role {
 						prevDirection = Utility.tryToMove(rc, rc.getLocation().directionTo(partsLoc), prevDirection);
 					}
 				}	
+				
 				//TEST Code
 				//Get closest den
+				if (rc.getRoundNum() > 1000) {
+					closeDen = enemyArchons[0];
+				}
 				if (rc.getRoundNum() % 3 == 0) {
 					getClosestDen();
 				}

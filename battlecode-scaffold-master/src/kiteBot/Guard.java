@@ -61,6 +61,7 @@ public class Guard implements Role {
     private MapLocation base;
     private MapLocation currentBasicGoal;
     private MapLocation currentOrderedGoal;
+    private MapLocation curDenLocation;
     
     //Global Numbers
     private int basicGoalTimeout = 0;
@@ -90,22 +91,15 @@ public class Guard implements Role {
 				//Change some flags if necessary
 				beingAttacked = (rc.getHealth() < prevHealth);
 				beingSniped = (enemiesSeen.length == 0 && beingAttacked);
-				for (int i=0;i<5;i++) {
-					ZombieSpawnSchedule sched = rc.getZombieSpawnSchedule();
-					ZombieCount[] zombiesOnRound = sched.getScheduleForRound(rc.getRoundNum() + i);
-					if (zombiesOnRound.length > 0) {
-						zombieSpawnSoon = true;
-						break;
-					} else {
-						zombieSpawnSoon = false;
-					}
-				}
-				
+								
 				RobotInfo targetEnemy = null;
 				if(enemiesWithinRange.length > 0 && rc.isWeaponReady()) { //We're in combat
 					targetEnemy = Utility.getTarget(enemiesWithinRange, 0, rc.getLocation());
 					if(targetEnemy != null) {
 						rc.attackLocation(targetEnemy.location);
+						if (targetEnemy.type == RobotType.ZOMBIEDEN) {
+							curDenLocation = targetEnemy.location;
+						}
 					} 
 				}
 				
@@ -117,20 +111,9 @@ public class Guard implements Role {
 				} else {
 					//Flee code
 					Direction dirToGo = Direction.NONE;
-					if (rc.getHealth() / rc.getType().maxHealth < RETREAT_HEALTH_PERCENT) {
-						if (Utility.chance(rand, .7)) {
-							dirToGo = rc.getLocation().directionTo(base);
-							prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
-						} else if (Utility.chance(rand, .7) && enemiesWithinRange.length > 0) {
-							dirToGo = rc.getLocation().directionTo(enemiesWithinRange[0].location).opposite();
-							prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
-						}
 					
-						//TODO Change to explict den location instead of goal
-				    } else if (attackDen && zombieSpawnSoon && currentOrderedGoal != null) {
-				    	prevDirection = Utility.tryToMove(rc, rc.getLocation().directionTo(currentOrderedGoal).opposite(), prevDirection);	
-						
-				    } else if (enemiesSeen.length > 0) {
+					//Move back code
+				    if (enemiesSeen.length > 0) {
 							//Move towards enemy
 							RobotInfo closeEnemy = Utility.getClosest(enemiesSeen, rc.getLocation());
 							prevDirection = Utility.tryToMove(rc, rc.getLocation().directionTo(closeEnemy.location), prevDirection);
@@ -182,6 +165,7 @@ public class Guard implements Role {
 						case Comms.ATTACK_DEN:
 							loc = Comms.decodeLocation(contents[1]);
 							currentOrderedGoal = loc;
+							curDenLocation = loc;
 							beingSniped = true;
 							attackDen = true;
 							break;
@@ -191,15 +175,6 @@ public class Guard implements Role {
 					}
 				}
 				else { //Basic Message
-					//Treat as a goto request
-					if (rc.getLocation().distanceSquaredTo(base) < DONT_FOLLOW_BASIC_IN_BASE_DISTANCE) {
-						currentBasicGoal = null;
-					} else if (rc.getLocation().distanceSquaredTo(message.getLocation()) < DONT_REBROADCAST_DISTANCE) {
-						basicGoalTimeout = 20;					
-					} else if (basicGoalTimeout == 0){
-						currentBasicGoal = message.getLocation();
-						basicGoalTimeout = (int) (rc.getLocation().distanceSquaredTo(currentBasicGoal) * 1.5); //Magic number
-					}
 				}
 			}
 		}
@@ -248,7 +223,7 @@ public class Guard implements Role {
 		} else if (medFriends.length < MED_TOO_FEW && Utility.chance(rand, .5)) {
 			//Come together if med range is sparse
 			RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc.getLocation());
-			if (Utility.chance(rand, .8) && friendsSeen != null) {
+			if (Utility.chance(rand, .8) && closestFriend != null) {
 				//Whether to clump or go home
 				dirToGo = rc.getLocation().directionTo(closestFriend.location);
 			} else {
@@ -258,6 +233,4 @@ public class Guard implements Role {
 		}
 		return dirToGo;
 	}
-	
-	
 }
