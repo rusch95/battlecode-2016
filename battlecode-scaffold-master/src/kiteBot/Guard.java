@@ -92,6 +92,8 @@ public class Guard implements Role {
 				beingAttacked = (rc.getHealth() < prevHealth);
 				beingSniped = (enemiesSeen.length == 0 && beingAttacked);
 								
+				Utility.cyanidePill(rc);
+				
 				RobotInfo targetEnemy = null;
 				if(enemiesWithinRange.length > 0 && rc.isWeaponReady()) { //We're in combat
 					targetEnemy = Utility.getTarget(enemiesWithinRange, 0, rc.getLocation());
