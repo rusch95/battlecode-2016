@@ -239,7 +239,7 @@ public class Archon implements Role {
 					if(!turtleBuild()) failToBuildCount++;
 				}		
 				if (Utility.chance(rand, .2) && rc.getTeamParts() > RobotType.TURRET.partCost && !turtle) {
-					if(!nonTurtleBuild()) failToBuildCount++;
+					if(!nonTurtleBuild(enemies)) failToBuildCount++;
 				}
 				
 		        healAlly();
@@ -495,12 +495,12 @@ public class Archon implements Role {
 		}
 		return builtSomething;
 	}
-	private boolean nonTurtleBuild() throws GameActionException {
+	private boolean nonTurtleBuild(RobotInfo[] enemies) throws GameActionException {
 		boolean builtSomething = false;
 		if (Utility.chance(rand, .5)) {
 			builtSomething = tryToBuild(RobotType.SOLDIER);
 		}
-		else if (Utility.chance(rand, .7)){
+		else if (Utility.chance(rand, .7) || enemies.length > 10){
 			builtSomething = tryToBuild(RobotType.GUARD);
 		} else {
 			builtSomething = tryToBuild(RobotType.TURRET);
