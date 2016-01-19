@@ -148,6 +148,11 @@ public class Archon implements Role {
 					}
 				}	
 				
+				//Rebase
+				if (rc.getRoundNum() % 20 == 0) {
+					rc.broadcastMessageSignal(Comms.MIGRATE, Comms.encodeLocation(rc.getLocation()), 1600);
+				}
+				
 				//If dps in direction too high, flee
 				int[] slice = {-1,0,1};
 				Utility.Tuple<Direction, Double> dpsDirTuple = Utility.getDirectionOfMostDPS(enemies, rc, slice);

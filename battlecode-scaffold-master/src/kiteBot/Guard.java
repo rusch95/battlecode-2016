@@ -123,7 +123,8 @@ public class Guard implements Role {
 					//TODO Replace with comm and scout orders
 				    } else if (currentOrderedGoal != null && rc.canSense(currentOrderedGoal)) {
 				    	if (attackDen) {
-				    		if (rc.senseRobotAtLocation(currentOrderedGoal) == null) {
+				    		RobotInfo robotAtLocation = rc.senseRobotAtLocation(currentOrderedGoal);
+				    		if (robotAtLocation == null || robotAtLocation.type != RobotType.ZOMBIEDEN) {
 				    			currentOrderedGoal = base;
 				    			attackDen = false;
 				    		}
@@ -174,9 +175,15 @@ public class Guard implements Role {
 						case Comms.ATTACK_ENEMY:
 							loc = Comms.decodeLocation(contents[1]);
 							currentOrderedGoal = loc;
+							break;
+						case Comms.MIGRATE:
+							loc = Comms.decodeLocation(contents[1]);
+							currentOrderedGoal = loc;
+							break;
 					}
 				}
 				else { //Basic Message
+					
 				}
 			}
 		}

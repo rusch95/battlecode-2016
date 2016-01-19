@@ -127,8 +127,7 @@ public class Utility {
 				fudgeFactor = .5;
 			} else if (robot.type == RobotType.SCOUT) {
 				//Scouts next to turrets should be super squashed to criple the turrets
-				fudgeFactor = 100; //TODO Change back to .3
-				miscFactors *= 5; 
+				fudgeFactor = .3; //TODO Change back to .3 
 			}
 			int distance = location.distanceSquaredTo(robot.location);
 			if (robot.team == Team.ZOMBIE) {

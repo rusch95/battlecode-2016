@@ -21,6 +21,7 @@ public class Soldier implements Role {
     private final Team otherTeam;
     private final RobotType myType;
     private final int attackRadius;
+    private int squadArchon;
     private final MapLocation[] myArchons;
     private final MapLocation[] enemyArchons;
 
@@ -65,8 +66,7 @@ public class Soldier implements Role {
 	private final int REACHED_GOAL_DISTANCE = 16;
     private final int DONT_REBROADCAST_DISTANCE = 16;
 	
-	public Soldier(RobotController rc){
-		
+	public Soldier(RobotController rc){	
 		this.rc = rc;
 		this.rand = new Random(rc.getID());
 		this.myTeam = rc.getTeam();
@@ -77,6 +77,8 @@ public class Soldier implements Role {
 		this.attackRadius = myType.attackRadiusSquared;
 		this.myArchons = rc.getInitialArchonLocations(myTeam);
 		this.enemyArchons = rc.getInitialArchonLocations(otherTeam);
+		RobotInfo[] friends = rc.senseNearbyRobots(MAX_RANGE, myTeam);
+		squadArchon = Utility.getBotOfType(friends, RobotType.ARCHON, rand, rc).ID;
 	}
 	
 	@Override
@@ -143,7 +145,8 @@ public class Soldier implements Role {
 					
 				    } else if (currentOrderedGoal != null && rc.canSense(currentOrderedGoal)) {
 				    	if (attackDen) {
-				    		if (rc.senseRobotAtLocation(currentOrderedGoal) == null) {
+				    		RobotInfo robotAtLocation = rc.senseRobotAtLocation(currentOrderedGoal);
+				    		if (robotAtLocation == null || robotAtLocation.type != RobotType.ZOMBIEDEN) {
 				    			currentOrderedGoal = base;
 				    			attackDen = false;
 				    		}
@@ -188,6 +191,7 @@ public class Soldier implements Role {
 			if(message.getTeam().equals(myTeam)){ //Friendly message
 				int[] contents = message.getMessage();
 				int id = message.getID();
+				if (id == squadArchon) base = message.getLocation(); //Update squad archon location
 				//TODO Include ignore bit to lower melee overhead
 				if(contents != null) { //Not a basic signal
 					int code = Comms.getMessageCode(contents[0]);
@@ -203,18 +207,15 @@ public class Soldier implements Role {
 						case Comms.ATTACK_ENEMY:
 							loc = Comms.decodeLocation(contents[1]);
 							currentOrderedGoal = loc;
+							break;
+						case Comms.MIGRATE:
+							loc = Comms.decodeLocation(contents[1]);
+							currentOrderedGoal = loc;
+							break;
 					}
 				}
 				else { //Basic Message
-					//Treat as a goto request
-					if (rc.getLocation().distanceSquaredTo(base) < DONT_FOLLOW_BASIC_IN_BASE_DISTANCE) {
-						currentBasicGoal = null;
-					} else if (rc.getLocation().distanceSquaredTo(message.getLocation()) < DONT_REBROADCAST_DISTANCE) {
-						basicGoalTimeout = 20;					
-					} else if (basicGoalTimeout == 0){
-						currentBasicGoal = message.getLocation();
-						basicGoalTimeout = (int) (rc.getLocation().distanceSquaredTo(currentBasicGoal) * 1.5); //Magic number
-					}
+	
 				}
 			}
 		}
