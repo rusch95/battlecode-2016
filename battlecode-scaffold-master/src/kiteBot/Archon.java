@@ -123,6 +123,28 @@ public class Archon implements Role {
 				scanArea();
 				
 				RobotInfo[] enemies = rc.senseHostileRobots(rc.getLocation(), -1);
+				RobotInfo[] friends = rc.senseNearbyRobots(-1, myTeam);
+				
+				
+				if (enemies.length == 0 && beingAttacked) {
+					beingSniped = true;
+				} else if (enemies.length > 0){
+					beingSniped = false;
+					lastSeenEnemyLoc = enemies[0].location;
+				} else {
+					beingSniped = false;
+				}
+				
+				//TODO Optimize
+				if (beingSniped) {
+					if (lastSeenEnemyLoc != null && Utility.chance(rand, .5)) {
+						Direction dirToGo = rc.getLocation().directionTo(lastSeenEnemyLoc).opposite();
+						prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
+					} else {
+						Direction dirToGo = Utility.getRandomDirection(rand);
+						prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
+					}
+				}
 				
 				//Handles getting parts and neutral bots
 				//TODO Decrease bytecode cost
@@ -145,10 +167,6 @@ public class Archon implements Role {
 					if (partsValue / rc.getTeamParts() > GET_PARTS_THRESHOLD) {
 						prevDirection = Utility.tryToMove(rc, rc.getLocation().directionTo(partsLoc), prevDirection);
 					}
-				}
-				//Rebase
-				if (rc.getRoundNum() % 20 == 0) {
-					rc.broadcastMessageSignal(Comms.MIGRATE, Comms.encodeLocation(rc.getLocation()), 1600);
 				}
 				//If dps in direction too high, flee
 				int[] slice = {-1,0,1};
@@ -181,11 +199,20 @@ public class Archon implements Role {
 				}
 				
 				//Send the troops to destroy dens
-				if (rc.getRoundNum() > 300 && rc.getRoundNum() % 40 == 1 && closeDen != null) {
-					rc.broadcastMessageSignal(Comms.createHeader(Comms.ATTACK_ENEMY), Comms.encodeLocation(closeDen), 300);
-					rc.broadcastMessageSignal(Comms.createHeader(Comms.TURRET_MOVE), Comms.encodeLocation(closeDen), 300);
+				int MIN_FRIENDS_TO_SIEGE = 10;
+				int MAX_DISTANCE_TO_ATTACK = 40;
+				if (rc.getRoundNum() > 300 && rc.getRoundNum() % 40 == 1 && friends.length > MIN_FRIENDS_TO_SIEGE && closeDen != null) {
+					rc.broadcastMessageSignal(Comms.createHeader(Comms.ATTACK_DEN), Comms.encodeLocation(closeDen), 1000);
+					rc.broadcastMessageSignal(Comms.createHeader(Comms.TURRET_MOVE), Comms.encodeLocation(closeDen), 1000);
 					target = closeDen;
 				}				
+				
+				if (rc.getTeamParts() > 300) {
+					RobotInfo[] adjacent = rc.senseNearbyRobots(2); 
+					if (adjacent.length > 7) {
+						rc.broadcastMessageSignal(Comms.MAKE_ROOM, 0, 2);
+					}
+				}
 				
 				//Move towards target
 				if (target != null && rc.getLocation().distanceSquaredTo(target) > 25) {
@@ -209,26 +236,6 @@ public class Archon implements Role {
 				}
 				
 		        healAlly();
-				
-				if (enemies.length == 0 && beingAttacked) {
-					beingSniped = true;
-				} else if (enemies.length > 0){
-					beingSniped = false;
-					lastSeenEnemyLoc = enemies[0].location;
-				} else {
-					beingSniped = false;
-				}
-				
-				//TODO Optimize
-				if (beingSniped) {
-					if (lastSeenEnemyLoc != null && Utility.chance(rand, .5)) {
-						Direction dirToGo = rc.getLocation().directionTo(lastSeenEnemyLoc).opposite();
-						prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
-					} else {
-						Direction dirToGo = Utility.getRandomDirection(rand);
-						prevDirection = Utility.tryToMove(rc, dirToGo, prevDirection);
-					}
-				}
 				
 				//Don't be in corner, fix
 				for (Direction dir : Direction.values()) {

@@ -209,7 +209,6 @@ public class Soldier implements Role {
 						case Comms.ATTACK_DEN:
 							loc = Comms.decodeLocation(contents[1]);
 							currentOrderedGoal = loc;
-							beingSniped = true;
 							attackDen = true;
 							break;
 						case Comms.ATTACK_ENEMY:

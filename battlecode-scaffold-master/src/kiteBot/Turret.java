@@ -20,14 +20,18 @@ public class Turret implements Role {
     private final Team myTeam;
     private final Team otherTeam;
     private Direction prevDirection = Direction.NONE;
+    private MapLocation prevLocation;
     
     private MapLocation targetEnemy;
     private boolean targetUpdated;
     private MapLocation currentOrderedGoal;
+    private int squadArchon;
+    private int timeSittingStillAsTTM;
     
     //Global Flags
     private boolean stopMoving = false;
     private boolean attackDen = false;
+    private boolean makeRoom = false;
     
     private int minX = 0;
     private int maxX = Integer.MAX_VALUE;
@@ -42,12 +46,17 @@ public class Turret implements Role {
     //Constants
     private static final int NEED_RECON_RANGE = 8;
     private static final int BROADCAST_RANGE = 16; //TODO Change to distance from archon, plus small factor
+    private static final int MAX_RANGE = -1;
     
 	public Turret(RobotController rc){
 		this.rc = rc;
 		this.rand = new Random(rc.getID());
 		this.myTeam = rc.getTeam();
 		this.otherTeam = myTeam.opponent();
+		this.prevLocation = rc.getLocation();
+		RobotInfo[] friends = rc.senseNearbyRobots(MAX_RANGE, myTeam);
+		squadArchon = Utility.getBotOfType(friends, RobotType.ARCHON, rand, rc).ID;
+		timeSittingStillAsTTM = 0;
 	}
 	
 	@Override
@@ -55,6 +64,7 @@ public class Turret implements Role {
 		while(true){
 			while(rc.getType() == RobotType.TURRET) {
 				try {
+					timeSittingStillAsTTM = 0;
 					targetUpdated = false;
 					handleMessages();
 					if(targetEnemy != null) rc.setIndicatorDot(targetEnemy, 250, 0, 250);
@@ -75,11 +85,23 @@ public class Turret implements Role {
 			while(rc.getType() == RobotType.TTM) {
 				try {
 					//TODO Fix it so if turrets cant get within range they unpack anyways
+
+
+					if (rc.getLocation() == prevLocation) {
+						timeSittingStillAsTTM += 1;
+					}
+					if (timeSittingStillAsTTM > 100) {
+						rc.unpack();
+					}
+					
+					this.prevLocation = rc.getLocation();
+					
 					RobotInfo[] hostilesNearby = rc.senseHostileRobots(rc.getLocation(), -1);
 					if(hostilesNearby.length > 0) { //unpack if there are enemies nearby
 						rc.unpack();
-					}
-					else if (currentOrderedGoal != null && rc.getLocation().distanceSquaredTo(currentOrderedGoal) < RobotType.TURRET.sensorRadiusSquared) {
+					} else if (rc.isCoreReady() && makeRoom) {
+						prevDirection=Utility.tryToMoveDontClear(rc, rc.getLocation().directionTo(currentOrderedGoal),prevDirection);
+					} else if (currentOrderedGoal != null && rc.getLocation().distanceSquaredTo(currentOrderedGoal) < RobotType.TURRET.sensorRadiusSquared) {
 						rc.setIndicatorString(0, ""+rc.getLocation().distanceSquaredTo(currentOrderedGoal));
 						handleMessages();
 						rc.unpack();		
@@ -170,6 +192,13 @@ public class Turret implements Role {
 								currentOrderedGoal = loc;
 								rc.pack();
 							}
+							break;
+						case Comms.MAKE_ROOM:
+							if (rc.getType() == RobotType.TURRET) {
+								makeRoom = true;
+								rc.pack();
+							}
+							break;
 					}
 				}
 			}
