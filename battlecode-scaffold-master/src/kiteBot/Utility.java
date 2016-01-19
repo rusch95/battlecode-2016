@@ -82,6 +82,25 @@ public class Utility {
 	}
 	
 	/**
+	 * Disintegrates the bot if it can avoid becoming a zombie.
+	 */
+	public static void cyanidePill(RobotController rc) {
+		if(!rc.isInfected()) {
+			double myHealth = rc.getHealth();
+			if(myHealth <= 10) {
+				MapLocation myLocation = rc.getLocation();
+				RobotInfo[] zombiesNearby = rc.senseNearbyRobots(RobotType.RANGEDZOMBIE.attackRadiusSquared + 5, Team.ZOMBIE); //Senses for zombies within slightly more than a RangedZombie's attack range
+				for(RobotInfo zombie : zombiesNearby) {
+					if( myLocation.distanceSquaredTo(zombie.location) <= zombie.type.attackRadiusSquared + 5) {
+						rc.disintegrate();
+					}
+				}
+			}
+		}
+	}
+	
+	
+	/**
 	 * Returns the RobotInfo of the robot with highest dps per health
 	 * @param robotsToSearch array of RobotInfo to search through
 	 * @param minRange min range to consider. 0 for most bots cept Turrets

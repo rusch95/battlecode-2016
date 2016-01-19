@@ -92,6 +92,8 @@ public class Soldier implements Role {
 				beingAttacked = (rc.getHealth() < prevHealth);
 				beingSniped = (enemiesSeen.length == 0 && beingAttacked);
 				
+				Utility.cyanidePill(rc);
+				
 				//Attack code
 				RobotInfo targetEnemy = null;
 				if(enemiesWithinRange.length > 0 && rc.isWeaponReady()) { //We're in combat
