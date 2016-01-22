@@ -104,5 +104,22 @@ public abstract class Role {
 		throw new UnsupportedOperationException();
 	}
 	
+	/**
+	 * Returns the RobotInfo of the weakest robot in the given array.
+	 * @param robotsToSearch array of RobotInfo to search through.
+	 * @return robot with most missing health.
+	 */
+	protected static RobotInfo getWeakest(RobotInfo[] robotsToSearch) {
+		double weakestWeakness = -1;
+		RobotInfo weakestRobot = null;
+		for(RobotInfo robot : robotsToSearch) {
+			double weakness = robot.maxHealth - robot.health;
+			if (weakness > weakestWeakness) {
+				weakestWeakness = weakness;
+				weakestRobot = robot;
+			}
+		}
+		return weakestRobot;
+	}
 	
 }
