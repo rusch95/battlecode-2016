@@ -24,7 +24,8 @@ public class Comms {
 	public static final int DEN_FOUND = 66; //If a den is scouted
 	public static final int DEN_DESTROYED = 67; //If a den is destroyed
 	public static final int ENEMY_ARCHON_SIGHTED = 70; //If an archon is scouted
-	public static final int PANIC = 75; //If there's a serious horde coming and more defenses are needed probably
+	public static final int NEED_BACKUP = 75;
+	public static final int NO_LONGER_NEED_BACKUP = 76;
 	public static final int SCOUT_DYING = 40; //A scout's dying hail mary
 	public static final int PARTS_FOUND = 44; //Found a parts pile
 	

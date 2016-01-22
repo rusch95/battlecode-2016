@@ -7,6 +7,7 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
+import battlecode.common.Signal;
 import battlecode.common.Team;
 
 public abstract class Role {
@@ -29,21 +30,24 @@ public abstract class Role {
 	protected final MapLocation birthplace;
 	
 	//MAP BOUNDS
-	protected int minX;
-	protected int maxX;
-	protected int minY;
-	protected int maxY;
+	protected int minX = 0;
+	protected int maxX = Integer.MAX_VALUE;
+	protected int minY = 0;
+	protected int maxY = Integer.MAX_VALUE;
     
     protected boolean minXFound = false;
     protected boolean maxXFound = false;
     protected boolean minYFound = false;
     protected boolean maxYFound = false;
 	
+    //MISC
+    protected Signal[] messages;
+    
 	//STATE CONSTANTS
 	public static final int SEIGING_DEN = 150;
 	public static final int SEIGING_ENEMY = 155;
-	
-	public static final int ATTACK_MOVING = 160;
+	public static final int IDLE = 100;
+	public static final int PROTECT = 150;
 	
 	public static final int DEFENDING_ARCHON = 180;
 	
@@ -70,9 +74,19 @@ public abstract class Role {
 	public abstract void run();
 	
 	/**
-	 * Handles the contents of a robot's signal queue
+	 * Handles the contents of a robot's signal queue.
 	 */
-	protected abstract void handleMessages();
+	protected void handleMessages(){
+		messages = rc.emptySignalQueue();
+		for(Signal message : messages) {
+			handleMessage(message);
+		}
+	}
+	
+	/**
+	 * Handles a single message.
+	 */
+	protected abstract void handleMessage(Signal message);
 	
 	/**
 	 * Checks if it can avoid becomes being a zombie by killing itself, and does it if it can.
@@ -120,6 +134,15 @@ public abstract class Role {
 			}
 		}
 		return weakestRobot;
+	}
+	
+	/**
+	 * Returns true or false with a given probability.
+	 * @param prob probability of returning true
+	 * @return result
+	 */
+	protected boolean chance(double prob) {
+		return (rand.nextDouble() <= prob);
 	}
 	
 }
