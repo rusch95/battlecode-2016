@@ -2,10 +2,12 @@ package qualbot;
 
 import java.util.ArrayList;
 
+import battlecode.common.Clock;
+import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
+import battlecode.common.RobotType;
 import battlecode.common.Signal;
-import team256.Comms;
 
 public class Archon extends Role {
 	protected ArrayList<MapLocation> dens;
@@ -18,7 +20,20 @@ public class Archon extends Role {
 
 	@Override
 	public void run() {
-		// TODO Auto-generated method stub
+		while(true) {
+			try {
+				handleMessages();
+				myLocation = rc.getLocation();
+				
+				//TEST CODE PLEASE IGNORE
+				tryToBuild(RobotType.SOLDIER);
+			} catch (Exception e) {
+	            System.out.println(e.getMessage());
+	            e.printStackTrace();
+	    	}
+			Clock.yield(); //TODO: Move this? Exceptions waste a round this way
+			
+		}
 	}
 
 	@Override
@@ -65,4 +80,11 @@ public class Archon extends Role {
 		}
 	}
 
+	private void tryToBuild(RobotType typeToBuild) throws GameActionException{
+		if(rc.isCoreReady()) {
+			for(int i = 0; i < 8; i++) {
+				if(rc.canBuild(directions[i], typeToBuild)) rc.build(directions[i], typeToBuild);
+			}
+		}
+	}
 }

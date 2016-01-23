@@ -1,14 +1,20 @@
 package qualbot;
 
 import battlecode.common.Clock;
+import battlecode.common.Direction;
+import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
+import battlecode.common.RobotInfo;
 import battlecode.common.Signal;
 
 public class Soldier extends Role {
 	private boolean providingBackup = false; //Overrides the current state
 	private int needsBackup;
 	private MapLocation backupFlag;
+	
+	private RobotInfo[] enemiesInSight;
+	private RobotInfo[] enemiesInRange;
 	
 	public Soldier(RobotController rc) {
 		super(rc);
@@ -18,10 +24,22 @@ public class Soldier extends Role {
 	public void run() {
 		while(true) {
 			try {
+				handleMessages();
+				myLocation = rc.getLocation();
+				enemiesInSight = rc.senseHostileRobots(myLocation, -1);
+				enemiesInRange = rc.senseHostileRobots(myLocation, attackRadiusSquared);
 				if(providingBackup) { //supercedes the current state
-					
+					if(enemiesInRange.length > 0) {
+						kite();
+					} else {
+						//move towards backupFlag
+					}
 				} else { //execute the current state
-					
+					if(enemiesInRange.length > 0) {
+						kite();
+					} else {
+						//go towards objective
+					}
 				}
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
@@ -99,4 +117,20 @@ public class Soldier extends Role {
 		}
 	}
 
+	/**
+	 * Attack a target, and then move to avoid enemies.
+	 * @throws GameActionException 
+	 */
+	private void kite() throws GameActionException{
+		if(rc.isWeaponReady()) {
+			RobotInfo target = getAttackTarget(enemiesInRange, minRange, myLocation);
+			if(rc.canAttackLocation(target.location)) {
+				rc.attackLocation(target.location);
+			} else {
+				rc.setIndicatorString(0, "FAILED TO ATTACK");
+			}
+		}
+		dodgeEnemies();
+	}
+	
 }

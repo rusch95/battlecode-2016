@@ -2,6 +2,8 @@ package qualbot;
 
 import java.util.Random;
 
+import battlecode.common.Direction;
+import battlecode.common.GameActionException;
 import battlecode.common.GameConstants;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
@@ -41,15 +43,18 @@ public abstract class Role {
     protected boolean maxYFound = false;
 	
     //MISC
+    protected MapLocation myLocation;
     protected Signal[] messages;
+    
+    protected static final Direction[] directions = {Direction.NORTH, Direction.NORTH_EAST,
+    												Direction.EAST, Direction.SOUTH_EAST,
+    												Direction.SOUTH, Direction.SOUTH_WEST,
+    												Direction.WEST, Direction.NORTH_WEST};
     
 	//STATE CONSTANTS
 	public static final int SEIGING_DEN = 150;
 	public static final int SEIGING_ENEMY = 155;
 	public static final int IDLE = 100;
-	public static final int PROTECT = 150;
-	
-	public static final int DEFENDING_ARCHON = 180;
 	
 	/**
 	 * Constructor for abstract class Role. Initializes final fields that all Role subclasses share.
@@ -111,11 +116,18 @@ public abstract class Role {
 	 * @param robotsToSearch array of RobotInfo to search through
 	 * @param minRange min range to consider. 0 for most bots cept Turrets
 	 * @param location location to search from
-	 * @return MapLocation location to base targeting off of
-	 * TODO: All of it
+	 * @return RobotInfo to base targeting off of
 	 */
 	protected RobotInfo getAttackTarget(RobotInfo[] targetList, int minRange, MapLocation location) {
-		throw new UnsupportedOperationException();
+		RobotInfo bestTarget = null;
+		double bestScore = -1;
+		for(RobotInfo target : targetList) {
+			if(target.location.distanceSquaredTo(location) >= minRange) { //We can hit them
+				double score = target.attackPower/(Math.max(1,target.type.attackDelay) * target.health); //DPS per health
+				if(score > bestScore) bestTarget = target;
+			}
+		}
+		return bestTarget;
 	}
 	
 	/**
@@ -143,6 +155,75 @@ public abstract class Role {
 	 */
 	protected boolean chance(double prob) {
 		return (rand.nextDouble() <= prob);
+	}
+	
+	/**
+	 * Moves in the optimal direction to avoid nearby enemies.
+	 * myLocation must be up to date.
+	 * @throws GameActionException 
+	 */
+	protected void dodgeEnemies() throws GameActionException{
+		if(rc.isCoreReady()) {
+			int lowestThreat = Integer.MAX_VALUE;
+			int[] threats = {0,0,0,0,0,0,0,0};
+			
+			//Loops through all visible enemies at the moment, which might be a problem.
+			for(RobotInfo enemy : rc.senseHostileRobots(myLocation, attackRadiusSquared)) {
+				Direction danger = myLocation.directionTo(enemy.location);
+				switch (danger) { //Change these values to scale with distance (and maybe dps)
+					case NORTH:
+						threats[0] += 1;
+						break;
+					case NORTH_EAST:
+						threats[1] += 1;
+						break;
+					case EAST:
+						threats[2] += 1;
+						break;
+					case SOUTH_EAST:
+						threats[3] += 1;
+						break;
+					case SOUTH:
+						threats[4] += 1;
+						break;
+					case SOUTH_WEST:
+						threats[5] += 1;
+						break;
+					case WEST:
+						threats[6] += 1;
+						break;
+					case NORTH_WEST:
+						threats[7] += 1;
+						break;
+				}
+			}
+			
+			//Account for obxtructions
+			for(int i = 0; i < 8; i++) {
+				double rubble = rc.senseRubble(myLocation.add(directions[i]));
+				if(rubble > GameConstants.RUBBLE_OBSTRUCTION_THRESH) threats[i] += 5; //Change this to scale with rubble quantity
+				else if( !rc.canMove(directions[i])) threats[i] = Integer.MAX_VALUE; //Some reason we can't move there other than rubble.
+				else if(rubble > GameConstants.RUBBLE_SLOW_THRESH) threats[i] += 2;
+			}
+			
+			//Find best option
+			int directionIndex = 0;
+			for(int i = 0; i < 8; i++) {
+				if(threats[i] < lowestThreat) {
+					lowestThreat = threats[i];
+					directionIndex = i;
+				}
+			}
+			Direction bestOption = directions[directionIndex];
+	
+			if(rc.canMove(bestOption)) {
+				rc.move(bestOption);
+				rc.setIndicatorString(2, "Moved: " + bestOption.toString());
+			} else if(lowestThreat < Integer.MAX_VALUE) { //Must be rubbled
+				rc.clearRubble(bestOption);
+				rc.setIndicatorString(2, "Cleared Rubble: " + bestOption.toString());
+			}
+		}
 	}
 	
 }
