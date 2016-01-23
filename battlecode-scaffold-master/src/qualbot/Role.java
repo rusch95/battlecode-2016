@@ -45,6 +45,8 @@ public abstract class Role {
     //MISC
     protected MapLocation myLocation;
     protected Signal[] messages;
+    protected MapLocation[] friendlyArchonStartPositions;
+    protected MapLocation[] enemyArchonStartPositions;
     
     protected static final Direction[] directions = {Direction.NORTH, Direction.NORTH_EAST,
     												Direction.EAST, Direction.SOUTH_EAST,
@@ -71,6 +73,8 @@ public abstract class Role {
 		else this.minRange = 0;
 		this.attackRadiusSquared = type.attackRadiusSquared;
 		this.sensorRadiusSquared = type.sensorRadiusSquared;
+		this.friendlyArchonStartPositions = rc.getInitialArchonLocations(myTeam);
+		this.enemyArchonStartPositions = rc.getInitialArchonLocations(otherTeam);
 	}
 	
 	/**

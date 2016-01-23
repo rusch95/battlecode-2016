@@ -83,7 +83,10 @@ public class Archon extends Role {
 	private void tryToBuild(RobotType typeToBuild) throws GameActionException{
 		if(rc.isCoreReady()) {
 			for(int i = 0; i < 8; i++) {
-				if(rc.canBuild(directions[i], typeToBuild)) rc.build(directions[i], typeToBuild);
+				if(rc.canBuild(directions[i], typeToBuild)) { 
+					rc.build(directions[i], typeToBuild);
+					break;
+				}
 			}
 		}
 	}
