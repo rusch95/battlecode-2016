@@ -14,14 +14,22 @@ public class Soldier extends Role {
 	private int needsBackup;
 	private MapLocation backupFlag;
 	private MapLocation objectiveLocation; //Current objective for the robot to move to
+	private int distanceToStayBackFromObjective = 0; //This controls how close they get to an objective, such as one step away from dens
 	
 	//Robots Seen
 	private RobotInfo[] enemiesInSight;
 	private RobotInfo[] enemiesInRange;
 	private RobotInfo[] friendsInSight;
 	
+	//Constants for gotoObjective
+	private static final int tooFarAwayThreshold = 30;  //Don't consider friends distances greater than this from us
+	private static final int closerToGoalThreshold = 6; //Go towards friend if closer to goal by this amount
+	
 	public Soldier(RobotController rc) {
 		super(rc);
+		
+		//TEST CODE
+		this.backupFlag = archonThatSpawnedMe.location;
 	}
 
 	@Override
@@ -33,27 +41,28 @@ public class Soldier extends Role {
 				enemiesInSight = rc.senseHostileRobots(myLocation, -1);
 				enemiesInRange = rc.senseHostileRobots(myLocation, attackRadiusSquared);
 				friendsInSight = rc.senseNearbyRobots(-1, myTeam);
-				
 
-				if (rc.getRoundNum() > 600)
-					objectiveLocation = friendlyArchonStartPositions[0];
-				if (rc.getRoundNum() > 1000)
-					objectiveLocation = friendlyArchonStartPositions[1];
-				if (rc.getRoundNum() > 1500)
-					objectiveLocation = friendlyArchonStartPositions[2];
-				if (rc.getRoundNum() > 1800)
-					objectiveLocation = enemyArchonStartPositions[0];
-				if (rc.getRoundNum() > 1950)
-					objectiveLocation = enemyArchonStartPositions[1];
-				if (rc.getRoundNum() > 2100)
-					objectiveLocation = enemyArchonStartPositions[2];
 				//TEST CODE
+				providingBackup = true;
+				
+				if (rc.getRoundNum() > 1500) {
+					objectiveLocation = enemyArchonStartPositions[0];
+					distanceToStayBackFromObjective = 70;
+					providingBackup = false;
+				}
+				if (rc.getRoundNum() > 1600) {
+					distanceToStayBackFromObjective = 0;
+				}
 				
 				if(providingBackup) { //supercedes the current state
 					if(enemiesInRange.length > 0) {
 						kite();
 					} else {
-						//move towards backupFlag
+						//TODO Fix this lazy fix
+						MapLocation objective = objectiveLocation;
+						objectiveLocation = backupFlag;
+						gotoObjective();
+						objectiveLocation = objective;
 					}
 				} else { //execute the current state
 					if(enemiesInRange.length > 0) {
@@ -159,68 +168,72 @@ public class Soldier extends Role {
 	private static final int[] secondaryDirectionsToTry = {2, -2, 3, -3};
 	private static final int[] allTheDirections = {0, 1, -1, 2, -2, 3, -3};
 	
+	/*
+	 * Goes to objectiveLocation up to distance distanceToStayBackFromObjective
+	 */
 	private void gotoObjective() throws GameActionException{
 		if(rc.isCoreReady() && objectiveLocation != null) {
 			Direction dirToObjective =  myLocation.directionTo(objectiveLocation);
-			//First let's see if we can move easily towards the objective
-			for (int deltaD:forwardDirectionsToTry) {
-				//Change to choose side direction of friend close to goal
-				Direction attemptDirection = Direction.values()[(dirToObjective.ordinal()+deltaD+8)%8];
-				if(rc.canMove(attemptDirection)) {
-					rc.move(attemptDirection);
-					return;
-				}
-			}		
-			//Move torwards friends if they are closer to the goal
-			RobotInfo friendCloserToGoal = null;
-			int tooFarAwayThreshold = 30;  //Magic
-			int closerToGoalThreshold = 6; //Magic
-			int distanceToGoal = myLocation.distanceSquaredTo(objectiveLocation);
-			for(RobotInfo robot:friendsInSight){
-				int robotDistanceToGoal = robot.location.distanceSquaredTo(objectiveLocation);
-				if ((robotDistanceToGoal - closerToGoalThreshold) > distanceToGoal &&
-					myLocation.distanceSquaredTo(robot.location) < tooFarAwayThreshold) {
-					
-					friendCloserToGoal = robot;
-					break;
-				}
-			}
-			//TODO Replace this with a better system of going in friend direction
-			if (friendCloserToGoal != null) {
-				Direction dirToFriend =  myLocation.directionTo(objectiveLocation);
+			int distanceToObjective = myLocation.distanceSquaredTo(objectiveLocation);
+			if (distanceToObjective > distanceToStayBackFromObjective) {
+				//First let's see if we can move straight towards the objective
 				for (int deltaD:forwardDirectionsToTry) {
-					Direction attemptDirection = Direction.values()[(dirToFriend.ordinal()+deltaD+8)%8];
+					//TODO Could slightly optimize by choosing diagonal direction of most friends first
+					Direction attemptDirection = Direction.values()[(dirToObjective.ordinal()+deltaD+8)%8];
 					if(rc.canMove(attemptDirection)) {
 						rc.move(attemptDirection);
 						return;
 					}
-				}	
-			}
-			
-			//Finally, we dig through the rubble
-			Direction minRubbleDirection = Direction.NONE;
-			double minRubble = Double.MAX_VALUE;
-			for (int deltaD:forwardDirectionsToTry) {
-				Direction attemptDirection = Direction.values()[(dirToObjective.ordinal()+deltaD+8)%8];
-				double rubbleAmount = rc.senseRubble(myLocation.add(attemptDirection));
-				//Find min rubble in forward direction and dig that
-				if (rubbleAmount < minRubble && rubbleAmount > 0) {
-					minRubble = rubbleAmount;
-					minRubbleDirection = attemptDirection;
+				}		
+				//Move torwards some friend if they are closer to the goal than us
+				RobotInfo friendCloserToGoal = null;
+				for(RobotInfo robot:friendsInSight){
+					//First let's find a friend that fits our profile
+					int robotDistanceToGoal = robot.location.distanceSquaredTo(objectiveLocation);
+					if ((robotDistanceToGoal - closerToGoalThreshold) > distanceToObjective && myLocation.distanceSquaredTo(robot.location) < tooFarAwayThreshold) {			
+						friendCloserToGoal = robot;
+						break;
+					}
 				}
-			}
-			if (minRubbleDirection != Direction.NONE ) {
-				rc.clearRubble(minRubbleDirection);
-				return;
-			}
-			for (int deltaD:secondaryDirectionsToTry) {
-				//Change to choose side direction of friend close to goal
-				Direction attemptDirection = Direction.values()[(dirToObjective.ordinal()+deltaD+8)%8];
-				if(rc.canMove(attemptDirection)) {
-					rc.move(attemptDirection);
+				//TODO Replace with a better movement towards friend, such as sideways in the friends direction
+				if (friendCloserToGoal != null) {
+					//And then let's move towards that friend
+					Direction dirToFriend =  myLocation.directionTo(objectiveLocation);
+					for (int deltaD:forwardDirectionsToTry) {
+						Direction attemptDirection = Direction.values()[(dirToFriend.ordinal()+deltaD+8)%8];
+						if(rc.canMove(attemptDirection)) {
+							rc.move(attemptDirection);
+							return;
+						}
+					}	
+				}
+				
+				//Then, we dig through the rubble
+				Direction minRubbleDirection = Direction.NONE;
+				double minRubble = Double.MAX_VALUE;
+				for (int deltaD:forwardDirectionsToTry) {
+					Direction attemptDirection = Direction.values()[(dirToObjective.ordinal()+deltaD+8)%8];
+					double rubbleAmount = rc.senseRubble(myLocation.add(attemptDirection));
+					//Find min rubble in forward direction and dig that
+					if (rubbleAmount < minRubble && rubbleAmount > 0) {
+						minRubble = rubbleAmount;
+						minRubbleDirection = attemptDirection;
+					}
+				}
+				if (minRubbleDirection != Direction.NONE ) {
+					rc.clearRubble(minRubbleDirection);
 					return;
 				}
 			}
+				//Finally, we try moving sideways or backwards
+				for (int deltaD:secondaryDirectionsToTry) {
+					Direction attemptDirection = Direction.values()[(dirToObjective.ordinal()+deltaD+8)%8];
+					if(rc.canMove(attemptDirection)) {
+						rc.move(attemptDirection);
+						return;
+					}
+				}
+			
 		}
 	}
 }

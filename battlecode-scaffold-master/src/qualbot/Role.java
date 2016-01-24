@@ -11,6 +11,7 @@ import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import battlecode.common.Signal;
 import battlecode.common.Team;
+import battlecode.common.ZombieSpawnSchedule;
 
 public abstract class Role {
 	
@@ -47,6 +48,10 @@ public abstract class Role {
     protected Signal[] messages;
     protected MapLocation[] friendlyArchonStartPositions;
     protected MapLocation[] enemyArchonStartPositions;
+    protected ZombieSpawnSchedule spawnSchedule;
+    protected int mapSymmetry; //0=XY,1=X, 2=Y, 3=XY
+    protected MapLocation mapCenter;
+    protected RobotInfo archonThatSpawnedMe;
     
     protected static final Direction[] directions = {Direction.NORTH, Direction.NORTH_EAST,
     												Direction.EAST, Direction.SOUTH_EAST,
@@ -75,6 +80,11 @@ public abstract class Role {
 		this.sensorRadiusSquared = type.sensorRadiusSquared;
 		this.friendlyArchonStartPositions = rc.getInitialArchonLocations(myTeam);
 		this.enemyArchonStartPositions = rc.getInitialArchonLocations(otherTeam);
+		this.spawnSchedule = rc.getZombieSpawnSchedule();
+		Tuple<Integer, MapLocation> mapSymTup = symmetryAndCenter();
+		this.mapSymmetry = mapSymTup.x; 
+		this.mapCenter = mapSymTup.y;
+		if (rc.getType() != RobotType.ARCHON) archonThatSpawnedMe = getBotOfType(rc.senseNearbyRobots(2, myTeam), RobotType.ARCHON);
 	}
 	
 	/**
@@ -230,4 +240,78 @@ public abstract class Role {
 		}
 	}
 	
+	/**
+	 * 
+	 * @param robotsToSearch
+	 * @param type of robot to return
+	 * @param rc
+	 * @return robot that matches type criteria from list of robots
+	 */
+	protected static RobotInfo getBotOfType(RobotInfo[] robotsToSearch, RobotType type) {
+		if (robotsToSearch.length == 0) {
+			return null;
+		}
+		for (RobotInfo robot:robotsToSearch) {
+			if (robot.type == type) {
+				return robot;
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * Calculates the map symmetry type and some of the center coordinates
+	 * The center corresponds to the middle location between the groups of archons
+	 * This only corresponds to the true center, when there is XY symmetry.
+	 * For Y symmetry, the y coordinate is correct, and for X sym, the x coord is correct
+	 * Finally, strong xy detects certain arrangements of the map, but is essentially the same as xy.
+	 * @return Returns a Tuple of the form x = symmetry and y = map center constrained by symmetry. For symmetry, 0 = strong xy, 1 = x, 2 = y, and 3 = xy. 
+	 */
+	protected Tuple<Integer, MapLocation> symmetryAndCenter() {
+		//Determine symmetry
+		MapLocation archonOneLoc = friendlyArchonStartPositions[0];
+		boolean symY = false;
+		boolean symX = false;
+		int totalX = 0; 
+		int totalY = 0;
+		for (MapLocation enemyArchonLoc : enemyArchonStartPositions) {
+			if (archonOneLoc.x == enemyArchonLoc.x) {
+				symX = true;
+			}
+			if (archonOneLoc.y == enemyArchonLoc.y) {
+				symY = true;
+			}
+			totalX += enemyArchonLoc.x;
+			totalY += enemyArchonLoc.y;	
+		}
+		for (MapLocation loc : friendlyArchonStartPositions) {
+			totalX += loc.x;
+			totalY += loc.y;
+		}
+		
+		totalX /= friendlyArchonStartPositions.length * 2; //The average of all positions is the center
+		totalY /= friendlyArchonStartPositions.length * 2;
+		MapLocation center = new MapLocation(totalX, totalY);
+		int sym;
+		if (symY && symX) {
+			sym = 0;
+		} else if (symX) {
+			sym = 1;
+		} else if (symY) {
+			sym = 2;
+		} else {
+			sym = 3;
+		}
+		Tuple<Integer, MapLocation> symAndCenter = new Tuple<>(sym, center);
+		return symAndCenter;
+	}
+	
+	public static class Tuple<X, Y> {
+		public final X x;
+		public final Y y;
+		public Tuple(X x, Y y) {
+			this.x = x;
+			this.y = y;
+		}
+	}
 }
