@@ -31,7 +31,7 @@ public class Soldier extends Role {
 		super(rc);
 		
 		//TEST CODE
-		this.backupFlag = archonThatSpawnedMe.location;
+		if(archonThatSpawnedMe != null) this.backupFlag = archonThatSpawnedMe.location;
 	}
 
 	@Override
@@ -151,17 +151,20 @@ public class Soldier extends Role {
 	 * @throws GameActionException 
 	 */
 	private void kite() throws GameActionException{
+		dealDamage();
+		dodgeEnemies();
+	}
+	
+	private void dealDamage() throws GameActionException {
 		if(rc.isWeaponReady()) {
 			RobotInfo target = getAttackTarget(enemiesInRange, minRange, myLocation);
-			if(rc.canAttackLocation(target.location)) {
+			if(target != null && rc.canAttackLocation(target.location)) {
 				rc.attackLocation(target.location);
 			} else {
 				rc.setIndicatorString(0, "FAILED TO ATTACK");
 			}
 		}
-		dodgeEnemies();
 	}
-	
 	
 	private static final int[] forwardDirectionsToTry = {0, 1, -1};
 	private static final int[] secondaryDirectionsToTry = {2, -2, 3, -3};
