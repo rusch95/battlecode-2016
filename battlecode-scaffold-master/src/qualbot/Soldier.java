@@ -13,7 +13,7 @@ public class Soldier extends Role {
 	private boolean providingBackup = false; //Overrides the current state
 	private int needsBackup;
 	private MapLocation backupFlag;
-	private MapLocation objectiveLocation; //Current objective for the robot to move to
+	private MapLocation objectiveFlag; //Current objective for the robot to move to
 	private int distanceToStayBackFromObjective = 0; //This controls how close they get to an objective, such as one step away from dens
 	
 	//Robots Seen
@@ -46,7 +46,7 @@ public class Soldier extends Role {
 				providingBackup = true;
 				
 				if (rc.getRoundNum() > 1500) {
-					objectiveLocation = enemyArchonStartPositions[0];
+					objectiveFlag = enemyArchonStartPositions[0];
 					distanceToStayBackFromObjective = 70;
 					providingBackup = false;
 				}
@@ -58,17 +58,13 @@ public class Soldier extends Role {
 					if(enemiesInRange.length > 0) {
 						kite();
 					} else {
-						//TODO Fix this lazy fix
-						MapLocation objective = objectiveLocation;
-						objectiveLocation = backupFlag;
-						gotoObjective();
-						objectiveLocation = objective;
+						gotoObjective(backupFlag);
 					}
 				} else { //execute the current state
 					if(enemiesInRange.length > 0) {
 						kite();
 					} else {
-						gotoObjective();
+						gotoObjective(objectiveFlag);
 					}
 				}
 			} catch (Exception e) {
@@ -168,13 +164,15 @@ public class Soldier extends Role {
 	private static final int[] secondaryDirectionsToTry = {2, -2, 3, -3};
 	private static final int[] allTheDirections = {0, 1, -1, 2, -2, 3, -3};
 	
-	/*
-	 * Goes to objectiveLocation up to distance distanceToStayBackFromObjective
+	/**
+	 * Goes to the location specified, and stays a certain distance away from it.
+	 * @param flag objective location
+	 * @throws GameActionException
 	 */
-	private void gotoObjective() throws GameActionException{
-		if(rc.isCoreReady() && objectiveLocation != null) {
-			Direction dirToObjective =  myLocation.directionTo(objectiveLocation);
-			int distanceToObjective = myLocation.distanceSquaredTo(objectiveLocation);
+	private void gotoObjective(MapLocation flag) throws GameActionException{
+		if(rc.isCoreReady() && flag != null) {
+			Direction dirToObjective =  myLocation.directionTo(flag);
+			int distanceToObjective = myLocation.distanceSquaredTo(flag);
 			if (distanceToObjective > distanceToStayBackFromObjective) {
 				//First let's see if we can move straight towards the objective
 				for (int deltaD:forwardDirectionsToTry) {
@@ -189,7 +187,7 @@ public class Soldier extends Role {
 				RobotInfo friendCloserToGoal = null;
 				for(RobotInfo robot:friendsInSight){
 					//First let's find a friend that fits our profile
-					int robotDistanceToGoal = robot.location.distanceSquaredTo(objectiveLocation);
+					int robotDistanceToGoal = robot.location.distanceSquaredTo(flag);
 					if ((robotDistanceToGoal - closerToGoalThreshold) > distanceToObjective && myLocation.distanceSquaredTo(robot.location) < tooFarAwayThreshold) {			
 						friendCloserToGoal = robot;
 						break;
@@ -198,7 +196,7 @@ public class Soldier extends Role {
 				//TODO Replace with a better movement towards friend, such as sideways in the friends direction
 				if (friendCloserToGoal != null) {
 					//And then let's move towards that friend
-					Direction dirToFriend =  myLocation.directionTo(objectiveLocation);
+					Direction dirToFriend =  myLocation.directionTo(flag);
 					for (int deltaD:forwardDirectionsToTry) {
 						Direction attemptDirection = Direction.values()[(dirToFriend.ordinal()+deltaD+8)%8];
 						if(rc.canMove(attemptDirection)) {
