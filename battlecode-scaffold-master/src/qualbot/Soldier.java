@@ -14,7 +14,9 @@ public class Soldier extends Role {
 	private int needsBackup;
 	private MapLocation backupFlag;
 	private MapLocation objectiveFlag; //Current objective for the robot to move to
-	private int distanceToStayBackFromObjective = 0; //This controls how close they get to an objective, such as one step away from dens
+	private int objectiveMargin = 0; //This controls how close they get to an objective, such as one step away from dens
+	
+	private boolean atObjective; //True if the robot has entered the required margin for the objective
 	
 	//Robots Seen
 	private RobotInfo[] enemiesInSight;
@@ -47,24 +49,25 @@ public class Soldier extends Role {
 				
 				if (rc.getRoundNum() > 1500) {
 					objectiveFlag = enemyArchonStartPositions[0];
-					distanceToStayBackFromObjective = 70;
+					objectiveMargin = 70;
 					providingBackup = false;
 				}
 				if (rc.getRoundNum() > 1600) {
-					distanceToStayBackFromObjective = 0;
+					objectiveMargin = 0;
 				}
+				//END TEST CODE
 				
 				if(providingBackup) { //supercedes the current state
 					if(enemiesInRange.length > 0) {
 						kite();
 					} else {
-						gotoObjective(backupFlag);
+						gotoObjective(backupFlag, objectiveMargin, objectiveMargin+15);
 					}
 				} else { //execute the current state
 					if(enemiesInRange.length > 0) {
 						kite();
 					} else {
-						gotoObjective(objectiveFlag);
+						gotoObjective(objectiveFlag, objectiveMargin, objectiveMargin+15);
 					}
 				}
 			} catch (Exception e) {
@@ -167,13 +170,16 @@ public class Soldier extends Role {
 	/**
 	 * Goes to the location specified, and stays a certain distance away from it.
 	 * @param flag objective location
+	 * @param hysterisis margin required to initially be at the objective
+	 * @param margin of distance that is satisfactory to be away from the objective
 	 * @throws GameActionException
 	 */
-	private void gotoObjective(MapLocation flag) throws GameActionException{
+	private void gotoObjective(MapLocation flag, int hysterisis, int margin) throws GameActionException{
 		if(rc.isCoreReady() && flag != null) {
 			Direction dirToObjective =  myLocation.directionTo(flag);
 			int distanceToObjective = myLocation.distanceSquaredTo(flag);
-			if (distanceToObjective > distanceToStayBackFromObjective) {
+			if ( (distanceToObjective > hysterisis && !atObjective)	|| distanceToObjective > margin) {
+				atObjective = distanceToObjective <= margin;
 				//First let's see if we can move straight towards the objective
 				for (int deltaD:forwardDirectionsToTry) {
 					//TODO Could slightly optimize by choosing diagonal direction of most friends first
@@ -222,7 +228,7 @@ public class Soldier extends Role {
 					rc.clearRubble(minRubbleDirection);
 					return;
 				}
-			}
+				
 				//Finally, we try moving sideways or backwards
 				for (int deltaD:secondaryDirectionsToTry) {
 					Direction attemptDirection = Direction.values()[(dirToObjective.ordinal()+deltaD+8)%8];
@@ -231,7 +237,8 @@ public class Soldier extends Role {
 						return;
 					}
 				}
-			
+			}
 		}
+		else atObjective = true;
 	}
 }
