@@ -84,7 +84,7 @@ public abstract class Role {
 		Tuple<Integer, MapLocation> mapSymTup = symmetryAndCenter();
 		this.mapSymmetry = mapSymTup.x; 
 		this.mapCenter = mapSymTup.y;
-		if (rc.getType() != RobotType.ARCHON) archonThatSpawnedMe = getBotOfType(rc.senseNearbyRobots(2, myTeam), RobotType.ARCHON);
+		if (rc.getType() != RobotType.ARCHON) archonThatSpawnedMe = getBotOfType(rc.senseNearbyRobots(4, myTeam), RobotType.ARCHON);
 	}
 	
 	/**
@@ -178,36 +178,37 @@ public abstract class Role {
 	 */
 	protected void dodgeEnemies() throws GameActionException{
 		if(rc.isCoreReady()) {
-			int lowestThreat = Integer.MAX_VALUE;
-			int[] threats = {0,0,0,0,0,0,0,0};
+			double lowestThreat = Double.MAX_VALUE;
+			double highestThreat = 0.0;
+			double[] threats = {0,0,0,0,0,0,0,0};
 			
 			//Loops through all visible enemies at the moment, which might be a problem.
-			for(RobotInfo enemy : rc.senseHostileRobots(myLocation, attackRadiusSquared)) {
+			for(RobotInfo enemy : rc.senseHostileRobots(myLocation, attackRadiusSquared+16)) {
 				Direction danger = myLocation.directionTo(enemy.location);
 				switch (danger) { //Change these values to scale with distance (and maybe dps)
 					case NORTH:
-						threats[0] += 1;
+						threats[0] += enemy.health;
 						break;
 					case NORTH_EAST:
-						threats[1] += 1;
+						threats[1] += enemy.health;
 						break;
 					case EAST:
-						threats[2] += 1;
+						threats[2] += enemy.health;
 						break;
 					case SOUTH_EAST:
-						threats[3] += 1;
+						threats[3] += enemy.health;
 						break;
 					case SOUTH:
-						threats[4] += 1;
+						threats[4] += enemy.health;
 						break;
 					case SOUTH_WEST:
-						threats[5] += 1;
+						threats[5] += enemy.health;
 						break;
 					case WEST:
-						threats[6] += 1;
+						threats[6] += enemy.health;
 						break;
 					case NORTH_WEST:
-						threats[7] += 1;
+						threats[7] += enemy.health;
 						break;
 				}
 			}
@@ -215,9 +216,9 @@ public abstract class Role {
 			//Account for obxtructions
 			for(int i = 0; i < 8; i++) {
 				double rubble = rc.senseRubble(myLocation.add(directions[i]));
-				if(rubble > GameConstants.RUBBLE_OBSTRUCTION_THRESH) threats[i] += 5; //Change this to scale with rubble quantity
+				if(rubble > GameConstants.RUBBLE_OBSTRUCTION_THRESH) threats[i] += 50; //Change this to scale with rubble quantity
 				else if( !rc.canMove(directions[i])) threats[i] = Integer.MAX_VALUE; //Some reason we can't move there other than rubble.
-				else if(rubble > GameConstants.RUBBLE_SLOW_THRESH) threats[i] += 2;
+				else if(rubble > GameConstants.RUBBLE_SLOW_THRESH) threats[i] += 20;
 			}
 			
 			//Find best option
@@ -227,10 +228,11 @@ public abstract class Role {
 					lowestThreat = threats[i];
 					directionIndex = i;
 				}
+				if(threats[i] > highestThreat) highestThreat = threats[i];
 			}
 			Direction bestOption = directions[directionIndex];
 	
-			if(rc.canMove(bestOption)) {
+			if(rc.canMove(bestOption) && highestThreat > 40) {
 				rc.move(bestOption);
 				rc.setIndicatorString(2, "Moved: " + bestOption.toString());
 			} else if(lowestThreat < Integer.MAX_VALUE) { //Must be rubbled
