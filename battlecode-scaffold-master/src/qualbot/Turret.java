@@ -10,8 +10,6 @@ import battlecode.common.RobotType;
 import battlecode.common.Signal;
 
 public class Turret extends Role {
-	protected ArrayList<MapLocation> dens;
-	
 	
 	public Turret(RobotController rc) {
 		super(rc);
@@ -22,12 +20,12 @@ public class Turret extends Role {
 	public void run() {
 		while(true) {
 			try {
-				handleMessages();
-				//TODO heal();
 				myLocation = rc.getLocation();
-				
-				//TEST CODE PLEASE IGNORE
-				tryToBuild(RobotType.SOLDIER);
+				if (rc.getType() == RobotType.TURRET) {
+					handleMessages();
+				} else if (rc.getType() == RobotType.TTM) {
+					handleMessages();
+				}
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
 	            e.printStackTrace();
@@ -46,9 +44,6 @@ public class Turret extends Role {
 				int aux = Comms.getAux(contents[0]);
 				MapLocation loc = Comms.decodeLocation(contents[1]);
 				switch (code){
-					case Comms.DEN_FOUND:
-						if(!dens.contains(loc)) dens.add(loc);
-						break;
 					case Comms.FOUND_MINX:
 						if(!minXFound) {
 							minX = aux;
@@ -77,17 +72,6 @@ public class Turret extends Role {
 			}
 			else { //Basic message
 				
-			}
-		}
-	}
-
-	private void tryToBuild(RobotType typeToBuild) throws GameActionException{
-		if(rc.isCoreReady()) {
-			for(int i = 0; i < 8; i++) {
-				if(rc.canBuild(directions[i], typeToBuild)) { 
-					rc.build(directions[i], typeToBuild);
-					break;
-				}
 			}
 		}
 	}

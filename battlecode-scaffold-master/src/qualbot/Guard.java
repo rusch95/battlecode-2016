@@ -27,11 +27,6 @@ public class Guard extends Role {
 	private boolean atObjective; //True if the robot has entered the required margin for the objective
 	private RobotInfo targetEnemy;
 	
-	
-	//Constants for gotoObjective
-	private static final int tooFarAwayThreshold = 30;  //Don't consider friends distances greater than this from us
-	private static final int closerToGoalThreshold = 6; //Go towards friend if closer to goal by this amount
-	
 	public Guard(RobotController rc) {
 		super(rc);
 		

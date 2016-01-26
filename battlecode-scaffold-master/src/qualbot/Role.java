@@ -303,11 +303,11 @@ public abstract class Role {
 	}
 	
 	
-	private static final int[] forwardDirectionsToTry = {0, 1, -1};
-	private static final int[] secondaryDirectionsToTry = {2, -2, 3, -3};
-	private static final int[] allTheDirections = {0, 1, -1, 2, -2, 3, -3};
-	private static final int tooFarAwayThreshold = 30;  //Don't consider friends distances greater than this from us
-	private static final int closerToGoalThreshold = 6; //Go towards friend if closer to goal by this amount
+	protected static final int[] forwardDirectionsToTry = {0, 1, -1};
+	protected static final int[] secondaryDirectionsToTry = {2, -2, 3, -3, 4};
+	protected static final int[] allTheDirections = {0, 1, -1, 2, -2, 3, -3};
+	protected static final int tooFarAwayThreshold = 30;  //Don't consider friends distances greater than this from us
+	protected static final int closerToGoalThreshold = 6; //Go towards friend if closer to goal by this amount
 	
 	/**
 	 * Goes to the location specified, and stays a certain distance away from it.
