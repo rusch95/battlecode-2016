@@ -1,7 +1,5 @@
 package qualbot;
 
-import com.sun.corba.se.impl.util.Utility;
-
 import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
@@ -34,9 +32,6 @@ public class Soldier extends Role {
 	
 	public Soldier(RobotController rc) {
 		super(rc);
-		
-		//TEST CODE
-		objectiveFlag = enemyArchonStartPositions[0];
 	}
 
 	@Override

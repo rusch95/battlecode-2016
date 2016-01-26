@@ -1,12 +1,15 @@
 package qualbot;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+
 import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
-import battlecode.common.GameConstants;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
+import battlecode.common.RobotType;
 import battlecode.common.Signal;
 
 public class Scout extends Role {
@@ -14,25 +17,29 @@ public class Scout extends Role {
 	private int needsBackup;
 	private MapLocation backupFlag;
 	private MapLocation objectiveLocation; //Current objective for the robot to move to
-	private int distanceToStayBackFromObjective = 0; //This controls how close they get to an objective, such as one step away from dens
+	
+	private static final int globalBroadcastRange = 10000; //TODO make this nice
+	
+	//Objectives Information
+	private final ArrayList<MapLocation> dens;
+	private final ArrayList<MapLocation> predictedDens; //Guesses about den locations based on symmetry
+	private final HashMap<Integer, MapLocation> enemyArchons; //Enemy Archon IDs and last known locations
 	
 	//Robots Seen
 	private RobotInfo[] enemiesInSight;
 	private RobotInfo[] enemiesInRange;
 	private RobotInfo[] friendsInSight;
 	
-	//Constants for gotoObjective
-	private static final int tooFarAwayThreshold = 30;  //Don't consider friends distances greater than this from us
-	private static final int closerToGoalThreshold = 6; //Go towards friend if closer to goal by this amount
-	
+	private boolean atObjective = false;
+	 
 	//To be sorted
 	private short[] mapLongitudesVisited = new short[280]; //Divide the map into 5 width lane
 	
 	public Scout(RobotController rc) {
 		super(rc);
-		
-		//TEST CODE
-		this.backupFlag = archonThatSpawnedMe.location;
+		this.dens = new ArrayList<MapLocation>();
+		this.predictedDens = new ArrayList<MapLocation>();
+		this.enemyArchons = new HashMap<Integer, MapLocation>();
 	}
 
 	@Override
@@ -44,12 +51,8 @@ public class Scout extends Role {
 				enemiesInSight = rc.senseHostileRobots(myLocation, -1);
 				enemiesInRange = rc.senseHostileRobots(myLocation, attackRadiusSquared);
 				friendsInSight = rc.senseNearbyRobots(-1, myTeam);
-
-				if(enemiesInRange.length > 0) {
-						kite();
-					} else {
-						gotoObjective();
-					}				
+				scanSurroundings();
+				
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
 	            e.printStackTrace();
@@ -126,41 +129,99 @@ public class Scout extends Role {
 	}
 
 	/**
-	 * Attack a target, and then move to avoid enemies.
+	 * Check surrounding map for things worth reporting
 	 * @throws GameActionException 
 	 */
-	private void kite() throws GameActionException{
-		if(rc.isWeaponReady()) {
-			RobotInfo target = getAttackTarget(enemiesInRange, minRange, myLocation);
-			if(rc.canAttackLocation(target.location)) {
-				rc.attackLocation(target.location);
-			} else {
-				rc.setIndicatorString(0, "FAILED TO ATTACK");
+	private void scanSurroundings() throws GameActionException {
+		double messages = 0;
+		
+		for(RobotInfo enemy : enemiesInSight) { //Look for dens/archons
+			if(enemy.type.equals(RobotType.ZOMBIEDEN) && !dens.contains(enemy.location)) {
+				dens.add(enemy.location);
+				predictedDens.remove(enemy.location);
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.DEN_FOUND), Comms.encodeLocation(enemy.location), globalBroadcastRange);
+				messages++;
+			} else if(enemy.type.equals(RobotType.ARCHON)) {
+				enemyArchons.put(enemy.ID, enemy.location);
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.ENEMY_ARCHON_SIGHTED, enemy.ID), Comms.encodeLocation(enemy.location), globalBroadcastRange);
+				messages++;
 			}
 		}
-		dodgeEnemies();
+		
+		MapLocation[] parts = rc.sensePartLocations(RobotType.ARCHON.sensorRadiusSquared);
+		for(MapLocation pile : parts) {
+			double value = rc.senseParts(pile);
+			if(value >= 20) {
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.PARTS_FOUND, (int)value), Comms.encodeLocation(pile), globalBroadcastRange);
+				messages++;
+			}
+			if(messages > 15) break;
+		}
+		
 	}
 	
+	//Constants for gotoObjective
 	private static final int[] forwardDirectionsToTry = {0, 1, -1};
 	private static final int[] secondaryDirectionsToTry = {2, -2, 3, -3};
 	private static final int[] allTheDirections = {0, 1, -1, 2, -2, 3, -3};
 	
-	/*
-	 * Goes to objectiveLocation up to distance distanceToStayBackFromObjective
+	private static final int tooFarAwayThreshold = 30;  //Don't consider friends distances greater than this from us
+	private static final int closerToGoalThreshold = 6; //Go towards friend if closer to goal by this amount
+	
+	/**
+	 * Goes to the location specified, and stays a certain distance away from it.
+	 * @param flag objective location
+	 * @param hysterisis margin required to initially be at the objective
+	 * @param margin of distance that is satisfactory to be away from the objective
+	 * @throws GameActionException
 	 */
-	private void gotoObjective() throws GameActionException{
-		if(rc.isCoreReady() && objectiveLocation != null) {
-			Direction dirToObjective =  myLocation.directionTo(objectiveLocation);
-		
-			//First let's see if we can move straight towards the objective
-			for (int deltaD:forwardDirectionsToTry) {
-				//TODO Could slightly optimize by choosing diagonal direction of most friends first
-				Direction attemptDirection = Direction.values()[(dirToObjective.ordinal()+deltaD+8)%8];
-				if(rc.canMove(attemptDirection)) {
-					rc.move(attemptDirection);
-					return;
+	private void gotoObjective(MapLocation flag, int hysterisis, int margin) throws GameActionException{
+		if(rc.isCoreReady() && flag != null) {
+			Direction dirToObjective =  myLocation.directionTo(flag);
+			int distanceToObjective = myLocation.distanceSquaredTo(flag);
+			if ( (distanceToObjective > hysterisis && !atObjective)	|| distanceToObjective > margin) {
+				atObjective = distanceToObjective <= margin;
+				//First let's see if we can move straight towards the objective
+				for (int deltaD:forwardDirectionsToTry) {
+					//TODO Could slightly optimize by choosing diagonal direction of most friends first
+					Direction attemptDirection = Direction.values()[(dirToObjective.ordinal()+deltaD+8)%8];
+					if(rc.canMove(attemptDirection)) {
+						rc.move(attemptDirection);
+						return;
+					}
+				}		
+				//Move torwards some friend if they are closer to the goal than us
+				RobotInfo friendCloserToGoal = null;
+				for(RobotInfo robot:friendsInSight){
+					//First let's find a friend that fits our profile
+					int robotDistanceToGoal = robot.location.distanceSquaredTo(flag);
+					if ((robotDistanceToGoal - closerToGoalThreshold) > distanceToObjective && myLocation.distanceSquaredTo(robot.location) < tooFarAwayThreshold) {			
+						friendCloserToGoal = robot;
+						break;
+					}
+				}
+				//TODO Replace with a better movement towards friend, such as sideways in the friends direction
+				if (friendCloserToGoal != null) {
+					//And then let's move towards that friend
+					Direction dirToFriend =  myLocation.directionTo(flag);
+					for (int deltaD:forwardDirectionsToTry) {
+						Direction attemptDirection = Direction.values()[(dirToFriend.ordinal()+deltaD+8)%8];
+						if(rc.canMove(attemptDirection)) {
+							rc.move(attemptDirection);
+							return;
+						}
+					}	
+				}
+				//Finally, we try moving sideways or backwards
+				for (int deltaD:secondaryDirectionsToTry) {
+					Direction attemptDirection = Direction.values()[(dirToObjective.ordinal()+deltaD+8)%8];
+					if(rc.canMove(attemptDirection)) {
+						rc.move(attemptDirection);
+						return;
+					}
 				}
 			}
 		}
+		else atObjective = true;
 	}
 }
