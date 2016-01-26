@@ -16,6 +16,8 @@ public class Archon extends Role {
 	private HashMap<MapLocation, Integer> parts;
 	private ArrayList<MapLocation> neutrals;
 	
+	protected int objectiveMargin = 0;
+	
 	public Archon(RobotController rc) {
 		super(rc);
 		this.parts = new HashMap<MapLocation, Integer>();
@@ -29,6 +31,10 @@ public class Archon extends Role {
 				handleMessages();
 				healAlly();
 				myLocation = rc.getLocation();
+				MapLocation objectiveFlag = enemyArchonStartPositions[0];
+				RobotInfo[] friendsInSight = rc.senseNearbyRobots(-1, myTeam);
+				if (rc.getTeamParts() < 200)
+				gotoObjective(objectiveFlag, objectiveMargin, objectiveMargin+15, friendsInSight);
 				
 				//TEST CODE PLEASE IGNORE
 				tryToBuild(RobotType.SOLDIER);
