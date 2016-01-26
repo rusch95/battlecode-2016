@@ -2,6 +2,7 @@ package qualbot;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 import battlecode.common.Clock;
 import battlecode.common.Direction;
@@ -13,12 +14,14 @@ import battlecode.common.RobotType;
 import battlecode.common.Signal;
 import battlecode.common.Team;
 
+
 public class Scout extends Role {
 	private boolean providingBackup = false; //Overrides the current state
 	private int needsBackup;
 	private MapLocation backupFlag;
 	
 	private static final int globalBroadcastRange = 10000; //TODO make this nice
+	private final int sensorRadius = (int)Math.pow(sensorRadiusSquared, 0.5);
 	
 	//Objectives Information
 	private final ArrayList<MapLocation> dens;
@@ -26,6 +29,10 @@ public class Scout extends Role {
 	private final ArrayList<MapLocation> destroyedDens;
 	private final HashMap<Integer, MapLocation> enemyArchons; //Enemy Archon IDs and last known locations
 	private final ArrayList<MapLocation> neutrals;
+	private final HashSet<MapLocation> partsLocations;
+	private byte[] fineBlocks = new byte[500];
+	private HashMap<MapLocation, Integer> fineMap;
+	private HashMap<MapLocation, Integer> roughMap;
 	
 	//Robots Seen
 	private RobotInfo[] enemiesInSight;
@@ -33,10 +40,12 @@ public class Scout extends Role {
 	private RobotInfo[] friendsInSight;
 	
 	private boolean atObjective = false;
-	private boolean explore = false;
+	private boolean findingOtherBounds = false;
 	 
 	//To be sorted
-	private short[] mapLongitudesVisited = new short[280]; //Divide the map into 5 width lane
+	private Direction cornerDirectionSearch = Direction.NONE;
+	boolean checkAwayFromCenter;
+	MapLocation trueCenter;
 	
 	//Scout-specific states
 	public static final int SEARCHING = 90;
@@ -48,6 +57,9 @@ public class Scout extends Role {
 		this.destroyedDens = new ArrayList<MapLocation>();
 		this.enemyArchons = new HashMap<Integer, MapLocation>();
 		this.neutrals = new ArrayList<MapLocation>();
+		this.partsLocations = new HashSet<MapLocation>();
+		this.fineMap = new HashMap<MapLocation, Integer>(400);
+		this.roughMap = new HashMap<MapLocation, Integer>(100);
 	}
 
 	@Override
@@ -60,7 +72,9 @@ public class Scout extends Role {
 				enemiesInRange = rc.senseHostileRobots(myLocation, attackRadiusSquared);
 				friendsInSight = rc.senseNearbyRobots(-1, myTeam);
 				scanSurroundings();
-
+				scanForBounds();
+				rebroadcastKnowledge();
+				
 				if(state == IDLE) {
 					if(dens.size() > 0) {//Siege a den if we can; the closest one to us
 						int minDistance = Integer.MAX_VALUE;
@@ -100,9 +114,20 @@ public class Scout extends Role {
 				} else if( state == SIEGING_ENEMY) {
 					
 				} else if( state == SEARCHING) {
-					
-				}
-				
+					boolean noCorners = !(minXFound || maxXFound || minYFound || maxYFound);
+					if (noCorners) {
+						Direction dirToGo = rc.getLocation().directionTo(mapCenter).opposite();
+						if (dirToGo == Direction.EAST || dirToGo == Direction.NORTH) {
+							dirToGo = Direction.NORTH_EAST;
+						} else if (dirToGo == Direction.SOUTH || dirToGo == Direction.WEST) {
+							dirToGo = Direction.SOUTH_WEST;
+						}
+						tryToMove(dirToGo);
+					} else {
+						if (mapSymmetry == Symmetry.XY || mapSymmetry == Symmetry.XY_STRONG) {
+							trueCenter = mapCenter;
+					}
+				}			
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
 	            e.printStackTrace();
@@ -111,6 +136,10 @@ public class Scout extends Role {
 		}
 	}
 
+	protected void rebroadcastKnowledge(){
+		//TODO: Put code here
+	}
+	
 	protected void handleMessage(Signal message) {
 		if(message.getTeam().equals(myTeam)) {
 			int[] contents = message.getMessage();
@@ -186,8 +215,15 @@ public class Scout extends Role {
 						break;
 					case Comms.ENEMY_ARCHON_SIGHTED:
 						enemyArchons.put(aux, loc);
+						break;
+					case Comms.NEUTRAL_FOUND:
+						neutrals.add(loc);
+						break;
+					case Comms.PARTS_FOUND:
+						partsLocations.add(loc);
+						break;
 					default:
-						System.out.println("Code not implemented: " + code);
+						//
 				}
 			}
 			else { //Basic message
@@ -205,6 +241,86 @@ public class Scout extends Role {
 		}
 	}
 
+	/**
+	 * Scans for Map Edges
+	 * @throws GameActionException 
+	 */
+	private void scanForBounds() throws GameActionException {
+		MapLocation cur = myLocation;
+		if(!minXFound){
+			for(int x = cur.x-sensorRadius+1; x <= cur.x; x++){
+				MapLocation tile = new MapLocation(x, cur.y);
+				if(!rc.onTheMap(tile)) {//Found a boundary
+					minXFound = true;
+					minX = x + 1;
+				}
+				else break;
+			}
+			if(minXFound) {
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MINX, minX), 0, globalBroadcastRange);
+				if (mapSymmetry != Symmetry.Y) {
+					maxXFound = true;
+					maxX = mapCenter.x + (mapCenter.x - minX);
+					rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MAXX, maxX), 0, globalBroadcastRange);
+				}
+			}
+		}
+		if(!maxXFound){
+			for(int x = cur.x+sensorRadius-1; x >= cur.x; x--){
+				MapLocation tile = new MapLocation(x, cur.y);
+				if(!rc.onTheMap(tile)) {//Found a boundary
+					maxXFound = true;
+					maxX = x - 1;
+				}
+				else break;
+			}
+			if(maxXFound) {
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MAXX, maxX), 0, globalBroadcastRange);
+				if (mapSymmetry != Symmetry.Y) {
+					minXFound = true;
+					minX = mapCenter.x + (mapCenter.x - maxX);
+					rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MINX, minX), 0, globalBroadcastRange);
+				}
+			}
+		}
+		if(!minYFound){
+			for(int y = cur.y-sensorRadius+1; y <= cur.y; y++){
+				MapLocation tile = new MapLocation(cur.x, y);
+				if(!rc.onTheMap(tile)) {//Found a boundary
+					minYFound = true;
+					minY = y + 1;
+				}
+				else break;
+			}
+			if(minYFound) {
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MINY, minY), 0, globalBroadcastRange);
+				if (mapSymmetry != Symmetry.X) {
+					maxYFound = true;
+					maxY = mapCenter.y + (mapCenter.y - minY);
+					rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MAXY, maxY), 0, globalBroadcastRange);
+				}
+			}
+		}
+		if(!maxYFound){
+			for(int y = cur.y+sensorRadius-1; y >= cur.y; y--){
+				MapLocation tile = new MapLocation(cur.x, y);
+				if(!rc.onTheMap(tile)) {//Found a boundary
+					maxYFound = true;
+					maxY = y - 1;
+				}
+				else break;
+			}
+			if(maxYFound) {
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MAXY, maxY), 0, globalBroadcastRange);
+				if (mapSymmetry != Symmetry.X) {
+					minYFound = true;
+					minY = mapCenter.y + (mapCenter.y - maxY);
+					rc.broadcastMessageSignal(Comms.createHeader(Comms.FOUND_MINY, minY), 0, globalBroadcastRange);
+				}
+			}
+		}
+	}
+	
 	/**
 	 * Check surrounding map for things worth reporting
 	 * @throws GameActionException 
@@ -237,10 +353,13 @@ public class Scout extends Role {
 		
 		MapLocation[] parts = rc.sensePartLocations(RobotType.ARCHON.sensorRadiusSquared);
 		for(MapLocation pile : parts) {
-			double value = rc.senseParts(pile);
-			if(value >= 20) {
-				rc.broadcastMessageSignal(Comms.createHeader(Comms.PARTS_FOUND, (int)value), Comms.encodeLocation(pile), globalBroadcastRange);
-				messages++;
+			if (!partsLocations.contains(pile)) {
+				partsLocations.add(pile);
+				double value = rc.senseParts(pile);
+				if(value >= 20) {
+					rc.broadcastMessageSignal(Comms.createHeader(Comms.PARTS_FOUND, (int)value), Comms.encodeLocation(pile), globalBroadcastRange);
+					messages++;
+				}
 			}
 			if(messages > 10) break;
 		}

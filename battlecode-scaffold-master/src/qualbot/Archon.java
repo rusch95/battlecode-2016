@@ -38,7 +38,7 @@ public class Archon extends Role {
 				MapLocation objectiveFlag = enemyArchonStartPositions[0];
 				if (rc.getTeamParts() < 200)
 				gotoObjective(objectiveFlag, objectiveMargin, objectiveMargin+15, friendsInSight);
-				tryToBuild(RobotType.TURRET);
+				tryToBuild(RobotType.SCOUT);
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
 	            e.printStackTrace();

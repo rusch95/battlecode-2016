@@ -317,8 +317,9 @@ public abstract class Role {
 	 * @param margin of distance that is satisfactory to be away from the objective
 	 * @param firendsInSight friends to consider for purposes of moving towards them
 	 * @throws GameActionException
+	 * @return returns if atObjective
 	 */
-	protected void gotoObjective(MapLocation flag, int hysterisis, int margin, RobotInfo[] friendsInSight) throws GameActionException{
+	protected boolean gotoObjective(MapLocation flag, int hysterisis, int margin, RobotInfo[] friendsInSight) throws GameActionException{
 		if(rc.isCoreReady() && flag != null) {
 			Direction dirToObjective =  myLocation.directionTo(flag);
 			int distanceToObjective = myLocation.distanceSquaredTo(flag);
@@ -330,7 +331,7 @@ public abstract class Role {
 					Direction attemptDirection = Direction.values()[(dirToObjective.ordinal()+deltaD+8)%8];
 					if(rc.canMove(attemptDirection)) {
 						rc.move(attemptDirection);
-						return;
+						return atObjective;
 					}
 				}		
 				//Move torwards some friend if they are closer to the goal than us
@@ -353,7 +354,7 @@ public abstract class Role {
 						Direction attemptDirection = Direction.values()[(dirToFriend.ordinal()+deltaD+8)%8];
 						if(rc.canMove(attemptDirection)) {
 							rc.move(attemptDirection);
-							return;
+							return atObjective;
 						}
 					}	
 				}
@@ -373,7 +374,7 @@ public abstract class Role {
 					}
 					if (minRubbleDirection != Direction.NONE ) {
 						rc.clearRubble(minRubbleDirection);
-						return;
+						return atObjective;
 					}
 				}
 				
@@ -382,11 +383,12 @@ public abstract class Role {
 					Direction attemptDirection = Direction.values()[(dirToObjective.ordinal()+deltaD+8)%8];
 					if(rc.canMove(attemptDirection)) {
 						rc.move(attemptDirection);
-						return;
+						return atObjective;
 					}
 				}
 			}
 		}
+	return atObjective;
 	}
 	
 	/**
@@ -432,19 +434,9 @@ public abstract class Role {
 				locationOffset = offsetY;
 				directionOffset = MAX_MAP_SIZE / LONGITUDE_WIDTH + 2;
 				break;
-			case NORTH_EAST:
-			case SOUTH_WEST:
-				//Figures out Y = X offset
-				locationOffset = (offsetX - offsetY) + 40;
-				directionOffset = (MAX_MAP_SIZE / LONGITUDE_WIDTH + 2) * 2 * 2;
-				break;
-			case NORTH_WEST:
-			case SOUTH_EAST:
-				//Figures out Y = -X offset
-				locationOffset = (offsetX + offsetY);
-				directionOffset = (MAX_MAP_SIZE / LONGITUDE_WIDTH + 2) * 3 * 4; //3 for being third; 4 for the extra space taken by diagonals 
-				break;
-		} 
+			default:
+				System.out.println("Fuck you");
+		}
 		return locationOffset / LONGITUDE_WIDTH + directionOffset;
 	}
 	
