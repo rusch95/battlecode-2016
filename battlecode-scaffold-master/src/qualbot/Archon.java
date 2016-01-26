@@ -107,10 +107,6 @@ public class Archon extends Role {
 						}
 					}
 				}
-				
-				if (enemies.length > 0) {
-					
-				}
 				handleMessages();
 				healAlly();
 				myLocation = rc.getLocation();
