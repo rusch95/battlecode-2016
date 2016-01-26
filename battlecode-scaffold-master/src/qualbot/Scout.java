@@ -88,7 +88,10 @@ public class Scout extends Role {
 					} else {
 						state = SEARCHING;
 					}
-				} else if( state == SIEGING_DEN) {
+				}
+				
+				//Don't waste a round changing state
+				if( state == SIEGING_DEN) {
 					
 				} else if( state == SIEGING_ENEMY) {
 					
