@@ -131,21 +131,23 @@ public abstract class Role {
 					return Direction.NONE;
 				}
 			}
-			//failed all attempts. Clear rubble ahead of us if we can.
-			double minRubble = Double.MAX_VALUE;
-			Direction dirToClear = Direction.NONE;
-			for(int deltaD:directionsToTryFirst){
-				Direction attemptDirection = Direction.values()[(forward.ordinal()+deltaD+8)%8];
-				MapLocation ahead = rc.getLocation().add(attemptDirection);
-				double rubbleAmount = rc.senseRubble(ahead);
-				if(rc.onTheMap(ahead) && rubbleAmount >= GameConstants.RUBBLE_OBSTRUCTION_THRESH && rubbleAmount <= minRubble) {
-					minRubble = rubbleAmount;
-					dirToClear = attemptDirection;
+			if (rc.getType() != RobotType.TTM && rc.getType() != RobotType.SCOUT) {
+				//failed all attempts. Clear rubble ahead of us if we can.
+				double minRubble = Double.MAX_VALUE;
+				Direction dirToClear = Direction.NONE;
+				for(int deltaD:directionsToTryFirst){
+					Direction attemptDirection = Direction.values()[(forward.ordinal()+deltaD+8)%8];
+					MapLocation ahead = rc.getLocation().add(attemptDirection);
+					double rubbleAmount = rc.senseRubble(ahead);
+					if(rc.onTheMap(ahead) && rubbleAmount >= GameConstants.RUBBLE_OBSTRUCTION_THRESH && rubbleAmount <= minRubble) {
+						minRubble = rubbleAmount;
+						dirToClear = attemptDirection;
+					}
 				}
-			}
-			if (dirToClear != Direction.NONE) {
-				rc.clearRubble(dirToClear);
-				return Direction.NONE;
+				if (dirToClear != Direction.NONE) {
+					rc.clearRubble(dirToClear);
+					return Direction.NONE;
+				}
 			}
 			for(int deltaD:directionsToTrySecond){
 				Direction attemptDirection = Direction.values()[(forward.ordinal()+deltaD+8)%8];
