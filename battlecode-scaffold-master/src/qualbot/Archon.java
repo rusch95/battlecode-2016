@@ -20,6 +20,7 @@ public class Archon extends Role {
 	
 	public Archon(RobotController rc) {
 		super(rc);
+		this.dens = new ArrayList<MapLocation>();
 		this.parts = new HashMap<MapLocation, Integer>();
 		this.neutrals = new ArrayList<MapLocation>();
 	}
@@ -36,7 +37,7 @@ public class Archon extends Role {
 				
 				//TEST CODE PLEASE IGNORE
 				if(rc.getTeamParts() > 130) {
-					if(chance(0.5)) tryToBuild(RobotType.SOLDIER);
+					if(chance(0.85)) tryToBuild(RobotType.SOLDIER);
 					else if(chance(0.5)) tryToBuild(RobotType.SCOUT);
 					else tryToBuild(RobotType.TURRET);
 				}

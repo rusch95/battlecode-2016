@@ -102,7 +102,7 @@ public class Guard implements Role {
 				RobotInfo targetEnemy = null;
 				if(enemiesWithinRange.length > 0) { //We're in combat
 					targetEnemy = Utility.getTarget(enemiesWithinRange, 0, rc.getLocation());
-					if( targetEnemy != null && rc.isWeaponReady()) {
+					if( targetEnemy != null && rc.isWeaponReady() && rc.canAttackLocation(targetEnemy.location)) {
 						rc.attackLocation(targetEnemy.location);
 					}
 				}			
@@ -175,7 +175,7 @@ public class Guard implements Role {
 						enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), RobotType.SOLDIER.attackRadiusSquared);
 						if(enemiesWithinRange.length > 0) { //We're in combat
 							targetEnemy = Utility.getTarget(enemiesWithinRange, 0, rc.getLocation());
-							if( targetEnemy != null) {
+							if( targetEnemy != null && rc.canAttackLocation(targetEnemy.location)) {
 								rc.attackLocation(targetEnemy.location);
 							}
 						}

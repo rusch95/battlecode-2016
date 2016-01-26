@@ -480,6 +480,15 @@ public abstract class Role {
 	}
 	
 	/**
+	 * Return a random direction, using the caller's Random object.
+	 * @param rand Random
+	 * @return a random Direction.
+	 */
+	protected Direction getRandomDirection() {
+		return directions[rand.nextInt(8)];
+	}
+	
+	/**
 	 * Calculates the map symmetry type and some of the center coordinates
 	 * The center corresponds to the middle location between the groups of archons
 	 * This only corresponds to the true center, when there is XY symmetry.
