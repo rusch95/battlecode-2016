@@ -21,14 +21,10 @@ public class Guard extends Role {
 	private MapLocation backupFlag;
 	private MapLocation objectiveFlag; //Current objective for the robot to move to
 	private int objectiveMargin = 0; //This controls how close they get to an objective, such as one step away from dens
-	private boolean atObjective; //True if the robot has entered the required margin for the objective
 	private RobotInfo targetEnemy;
 	
 	public Guard(RobotController rc) {
 		super(rc);
-		
-		//TEST CODE
-		objectiveFlag = enemyArchonStartPositions[0];
 	}
 
 	@Override
@@ -156,84 +152,5 @@ public class Guard extends Role {
 				rc.setIndicatorString(0, "FAILED TO ATTACK");
 			}
 		}
-	}
-	
-	private static final int[] forwardDirectionsToTry = {0, 1, -1};
-	private static final int[] secondaryDirectionsToTry = {2, -2, 3, -3};
-	private static final int[] allTheDirections = {0, 1, -1, 2, -2, 3, -3};
-	
-	/**
-	 * Goes to the location specified, and stays a certain distance away from it.
-	 * @param flag objective location
-	 * @param hysterisis margin required to initially be at the objective
-	 * @param margin of distance that is satisfactory to be away from the objective
-	 * @throws GameActionException
-	 */
-	private void gotoObjective(MapLocation flag, int hysterisis, int margin) throws GameActionException{
-		if(rc.isCoreReady() && flag != null) {
-			Direction dirToObjective =  myLocation.directionTo(flag);
-			int distanceToObjective = myLocation.distanceSquaredTo(flag);
-			if ( (distanceToObjective > hysterisis && !atObjective)	|| distanceToObjective > margin) {
-				atObjective = distanceToObjective <= margin;
-				//First let's see if we can move straight towards the objective
-				for (int deltaD:forwardDirectionsToTry) {
-					//TODO Could slightly optimize by choosing diagonal direction of most friends first
-					Direction attemptDirection = Direction.values()[(dirToObjective.ordinal()+deltaD+8)%8];
-					if(rc.canMove(attemptDirection)) {
-						rc.move(attemptDirection);
-						return;
-					}
-				}		
-				//Move torwards some friend if they are closer to the goal than us
-				RobotInfo friendCloserToGoal = null;
-				for(RobotInfo robot:friendsInSight){
-					//First let's find a friend that fits our profile
-					int robotDistanceToGoal = robot.location.distanceSquaredTo(flag);
-					if ((robotDistanceToGoal - closerToGoalThreshold) > distanceToObjective && myLocation.distanceSquaredTo(robot.location) < tooFarAwayThreshold) {			
-						friendCloserToGoal = robot;
-						break;
-					}
-				}
-				//TODO Replace with a better movement towards friend, such as sideways in the friends direction
-				if (friendCloserToGoal != null) {
-					//And then let's move towards that friend
-					Direction dirToFriend =  myLocation.directionTo(flag);
-					for (int deltaD:forwardDirectionsToTry) {
-						Direction attemptDirection = Direction.values()[(dirToFriend.ordinal()+deltaD+8)%8];
-						if(rc.canMove(attemptDirection)) {
-							rc.move(attemptDirection);
-							return;
-						}
-					}	
-				}
-				
-				//Then, we dig through the rubble
-				Direction minRubbleDirection = Direction.NONE;
-				double minRubble = Double.MAX_VALUE;
-				for (int deltaD:forwardDirectionsToTry) {
-					Direction attemptDirection = Direction.values()[(dirToObjective.ordinal()+deltaD+8)%8];
-					double rubbleAmount = rc.senseRubble(myLocation.add(attemptDirection));
-					//Find min rubble in forward direction and dig that
-					if (rubbleAmount < minRubble && rubbleAmount > 0) {
-						minRubble = rubbleAmount;
-						minRubbleDirection = attemptDirection;
-					}
-				}
-				if (minRubbleDirection != Direction.NONE ) {
-					rc.clearRubble(minRubbleDirection);
-					return;
-				}
-				
-				//Finally, we try moving sideways or backwards
-				for (int deltaD:secondaryDirectionsToTry) {
-					Direction attemptDirection = Direction.values()[(dirToObjective.ordinal()+deltaD+8)%8];
-					if(rc.canMove(attemptDirection)) {
-						rc.move(attemptDirection);
-						return;
-					}
-				}
-			}
-		}
-		else atObjective = true;
 	}
 }
