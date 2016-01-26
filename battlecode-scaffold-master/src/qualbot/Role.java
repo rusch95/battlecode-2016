@@ -384,7 +384,6 @@ public abstract class Role {
 				}
 			}
 		}
-		else atObjective = true;
 	}
 	
 	/**
