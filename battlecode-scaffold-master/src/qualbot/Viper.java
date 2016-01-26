@@ -1,5 +1,7 @@
 package qualbot;
 
+import com.sun.corba.se.impl.util.Utility;
+
 import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
@@ -7,21 +9,25 @@ import battlecode.common.GameConstants;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
+import battlecode.common.RobotType;
 import battlecode.common.Signal;
+import battlecode.common.Team;
 
 public class Viper extends Role {
+	//Robots Seen
+	private RobotInfo[] enemiesInSight;
+	private RobotInfo[] enemiesInRange;
+	private RobotInfo[] friendsInSight;
+	
+	//Misc State fields
 	private boolean providingBackup = false; //Overrides the current state
 	private int needsBackup;
 	private MapLocation backupFlag;
 	private MapLocation objectiveFlag; //Current objective for the robot to move to
 	private int objectiveMargin = 0; //This controls how close they get to an objective, such as one step away from dens
-	
 	private boolean atObjective; //True if the robot has entered the required margin for the objective
+	private RobotInfo targetEnemy;
 	
-	//Robots Seen
-	private RobotInfo[] enemiesInSight;
-	private RobotInfo[] enemiesInRange;
-	private RobotInfo[] friendsInSight;
 	
 	//Constants for gotoObjective
 	private static final int tooFarAwayThreshold = 30;  //Don't consider friends distances greater than this from us
@@ -31,50 +37,35 @@ public class Viper extends Role {
 		super(rc);
 		
 		//TEST CODE
-		if(archonThatSpawnedMe != null) this.backupFlag = archonThatSpawnedMe.location;
+		objectiveFlag = enemyArchonStartPositions[0];
 	}
 
 	@Override
 	public void run() {
 		while(true) {
 			try {
-				handleMessages(); //TODO Possibly amortize to every other turn if bytecode gets too high
 				myLocation = rc.getLocation();
+				targetEnemy = null;
 				enemiesInSight = rc.senseHostileRobots(myLocation, -1);
 				enemiesInRange = rc.senseHostileRobots(myLocation, attackRadiusSquared);
 				friendsInSight = rc.senseNearbyRobots(-1, myTeam);
+				handleMessages(); //TODO Possibly amortize to every other turn if bytecode gets too high
 
-				//TEST CODE
-				providingBackup = true;
-				
-				rc.setIndicatorString(0, "Vertical Index:"+longitudeIndex(rc.getLocation(),Direction.NORTH)
-										+"  Horizontal Index:"+longitudeIndex(rc.getLocation(),Direction.EAST));
-				MapLocation mirrored = mirroredLocation(rc.getLocation(), mapSymmetry);
-				rc.setIndicatorString(1, "Mirror X: "+mirrored.x+"  Mirror Y: "+mirrored.y);
-
-				if (rc.getRoundNum() > 1500) {
-					objectiveFlag = enemyArchonStartPositions[0];
-					objectiveMargin = 70;
-					providingBackup = false;
-				}
-				if (rc.getRoundNum() > 1600) {
-					objectiveMargin = 0;
-				}
-				//END TEST CODE
-				
-				if(providingBackup) { //supercedes the current state
-					if(enemiesInRange.length > 0) {
-						kite();
-					} else {
-						gotoObjective(backupFlag, objectiveMargin, objectiveMargin+15);
-					}
+				if(enemiesInRange.length > 0) {
+					targetEnemy = getAttackTarget(enemiesInRange, minRange, myLocation);
+					dealDamage();
+					kite(targetEnemy);
+				} else if(enemiesInSight.length > 0) {
+					targetEnemy = getAttackTarget(enemiesInSight, minRange, myLocation);
+					kite(targetEnemy);
+				} else if(providingBackup) { //supercedes the current state
+					gotoObjective(backupFlag, objectiveMargin, objectiveMargin+15);
 				} else { //execute the current state
-					if(enemiesInRange.length > 0) {
-						kite();
-					} else {
-						gotoObjective(objectiveFlag, objectiveMargin, objectiveMargin+15);
-					}
+					gotoObjective(objectiveFlag, objectiveMargin, objectiveMargin+15);
 				}
+				targetEnemy = getAttackTarget(enemiesInRange, minRange, myLocation);
+				dealDamage();
+				
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
 	            e.printStackTrace();
@@ -83,6 +74,52 @@ public class Viper extends Role {
 		}
 	}
 
+	/**
+	 * Kite-moves away from a given enemy
+	 * @param kitingTarget
+	 * @throws GameActionException
+	 */
+	private void kite(RobotInfo kitingTarget) throws GameActionException {
+		Direction toTarget = myLocation.directionTo(kitingTarget.location);
+		int currentDistance = myLocation.distanceSquaredTo(kitingTarget.location);
+		int kiteDistance = myLocation.add(toTarget.opposite()).distanceSquaredTo(kitingTarget.location);
+		
+		if(kiteDistance <= attackRadiusSquared && targetEnemy.type != RobotType.ZOMBIEDEN) {
+			tryToMove(toTarget.opposite());
+		} else if (currentDistance > attackRadiusSquared) {
+			tryToMove(toTarget);
+		}
+	}
+	
+	@Override
+	protected RobotInfo getAttackTarget(RobotInfo[] targetList, int minRange, MapLocation location) {
+		RobotInfo bestTarget = null;
+		double bestScore = -1;
+		double attackPower = .1; //Offset for being able to differentiate between targets with zero attack power
+		double miscFactors = 1; //Factors for changing targeting
+		for(RobotInfo target : targetList) {
+			int distanceToTarget = target.location.distanceSquaredTo(location);
+			if(distanceToTarget >= minRange) { //We can hit them
+				attackPower = target.attackPower;
+				miscFactors *= Math.pow(distanceToTarget, .33);
+				if (target.viperInfectedTurns > 3) {
+					miscFactors *= .2;
+				}			
+				if (target.type == RobotType.VIPER) {
+					miscFactors *= 4;
+				} else if (target.type == RobotType.TTM) {
+					attackPower = RobotType.TTM.attackPower - 1;
+				}
+				if (target.team == Team.ZOMBIE) {
+					miscFactors *= .2;
+				}
+				double score = (target.attackPower)/(Math.max(3,target.type.attackDelay) * target.health * miscFactors); //DPS per health
+				if(score > bestScore) bestTarget = target;
+			}
+		}
+		return bestTarget;
+	}
+	
 	@Override
 	protected void handleMessage(Signal message) {
 		if(message.getTeam().equals(myTeam)) {
@@ -150,21 +187,11 @@ public class Viper extends Role {
 			}
 		}
 	}
-
-	/**
-	 * Attack a target, and then move to avoid enemies.
-	 * @throws GameActionException 
-	 */
-	private void kite() throws GameActionException{
-		dealDamage();
-		dodgeEnemies();
-	}
 	
 	private void dealDamage() throws GameActionException {
 		if(rc.isWeaponReady()) {
-			RobotInfo target = getAttackTarget(enemiesInRange, minRange, myLocation);
-			if(target != null && rc.canAttackLocation(target.location)) {
-				rc.attackLocation(target.location);
+			if(targetEnemy != null && rc.canAttackLocation(targetEnemy.location)) {
+				rc.attackLocation(targetEnemy.location);
 			} else {
 				rc.setIndicatorString(0, "FAILED TO ATTACK");
 			}

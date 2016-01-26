@@ -184,15 +184,25 @@ public abstract class Role {
 	protected RobotInfo getAttackTarget(RobotInfo[] targetList, int minRange, MapLocation location) {
 		RobotInfo bestTarget = null;
 		double bestScore = -1;
+		double attackPower = .1; //Offset for being able to differentiate between targets with zero attack power
+		double miscFactors = 1; //Factors for changing targeting
 		for(RobotInfo target : targetList) {
 			if(target.location.distanceSquaredTo(location) >= minRange) { //We can hit them
-				double score = target.attackPower/(Math.max(1,target.type.attackDelay) * target.health); //DPS per health
+				attackPower = target.attackPower;
+				if (target.type == RobotType.VIPER) {
+					miscFactors *= 4;
+				} else if (target.type == RobotType.TTM) {
+					attackPower = RobotType.TTM.attackPower - 1;
+				}
+				if (target.team == Team.ZOMBIE) {
+					miscFactors *= .7;
+				}
+				double score = (target.attackPower)/(Math.max(3,target.type.attackDelay) * target.health * miscFactors); //DPS per health
 				if(score > bestScore) bestTarget = target;
 			}
 		}
 		return bestTarget;
 	}
-	
 	/**
 	 * Returns the RobotInfo of the weakest robot in the given array.
 	 * @param robotsToSearch array of RobotInfo to search through.
