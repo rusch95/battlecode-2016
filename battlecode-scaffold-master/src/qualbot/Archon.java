@@ -31,12 +31,13 @@ public class Archon extends Role {
 				handleMessages();
 				healAlly();
 				myLocation = rc.getLocation();
-				MapLocation objectiveFlag = enemyArchonStartPositions[0];
 				RobotInfo[] friendsInSight = rc.senseNearbyRobots(-1, myTeam);
-				if (rc.getTeamParts() < 200)
-				gotoObjective(objectiveFlag, objectiveMargin, objectiveMargin+15, friendsInSight);
+				
 				
 				//TEST CODE PLEASE IGNORE
+				MapLocation objectiveFlag = enemyArchonStartPositions[0];
+				if (rc.getTeamParts() < 200)
+				gotoObjective(objectiveFlag, objectiveMargin, objectiveMargin+15, friendsInSight);
 				tryToBuild(RobotType.SOLDIER);
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
@@ -87,7 +88,7 @@ public class Archon extends Role {
 						parts.put(loc, aux);
 						break;
 					case Comms.NEUTRAL_FOUND:
-						neutrals.add(loc);
+						if(!neutrals.contains(loc)) neutrals.add(loc);
 						break;
 				}
 			}
