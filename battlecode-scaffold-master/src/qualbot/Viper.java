@@ -147,19 +147,19 @@ public class Viper extends Role {
 						break;
 					case Comms.ATTACK_DEN:
 						if(state == IDLE) {
-							targetFlag = loc;
-							state = SEIGING_DEN;
+							objectiveFlag = loc;
+							state = SIEGING_DEN;
 						}
 						break;
 					case Comms.DEN_DESTROYED:
-						if(state == SEIGING_DEN && targetFlag.equals(loc)) {
+						if(state == SIEGING_DEN && objectiveFlag.equals(loc)) {
 							state = IDLE;
 						}
 						break;
 					case Comms.ATTACK_ENEMY:
 						if(state == IDLE) {
-							targetFlag = loc;
-							state = SEIGING_ENEMY;
+							objectiveFlag = loc;
+							state = SIEGING_ENEMY;
 						}
 						break;
 					case Comms.NEED_BACKUP:

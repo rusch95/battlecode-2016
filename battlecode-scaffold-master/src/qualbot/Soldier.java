@@ -3,7 +3,6 @@ package qualbot;
 import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
-import battlecode.common.GameConstants;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
@@ -20,7 +19,6 @@ public class Soldier extends Role {
 	private boolean providingBackup = false; //Overrides the current state
 	private int needsBackup;
 	private MapLocation backupFlag;
-	private MapLocation objectiveFlag; //Current objective for the robot to move to
 	private int objectiveMargin = 0; //This controls how close they get to an objective, such as one step away from dens
 	private boolean atObjective; //True if the robot has entered the required margin for the objective
 	private RobotInfo targetEnemy;
@@ -115,19 +113,19 @@ public class Soldier extends Role {
 						break;
 					case Comms.ATTACK_DEN:
 						if(state == IDLE) {
-							targetFlag = loc;
-							state = SEIGING_DEN;
+							objectiveFlag = loc;
+							state = SIEGING_DEN;
 						}
 						break;
 					case Comms.DEN_DESTROYED:
-						if(state == SEIGING_DEN && targetFlag.equals(loc)) {
+						if(state == SIEGING_DEN && objectiveFlag.equals(loc)) {
 							state = IDLE;
 						}
 						break;
 					case Comms.ATTACK_ENEMY:
 						if(state == IDLE) {
-							targetFlag = loc;
-							state = SEIGING_ENEMY;
+							objectiveFlag = loc;
+							state = SIEGING_ENEMY;
 						}
 						break;
 					case Comms.NEED_BACKUP:

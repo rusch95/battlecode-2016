@@ -17,7 +17,7 @@ public abstract class Role {
 	
 	//STATUS INFORMATION
 	protected int state;
-	protected MapLocation targetFlag;
+	protected MapLocation objectiveFlag;
 	
 	//ESSENTIAL FIELDS
 	protected final RobotController rc;
@@ -63,9 +63,9 @@ public abstract class Role {
         X, Y, XY, XY_STRONG; 
     }
     
-	//STATE CONSTANTS
-	public static final int SEIGING_DEN = 150;
-	public static final int SEIGING_ENEMY = 155;
+	//MILITARY STATE CONSTANTS
+	public static final int SIEGING_DEN = 150;
+	public static final int SIEGING_ENEMY = 155;
 	public static final int IDLE = 100;
 	
 	/**
@@ -79,6 +79,7 @@ public abstract class Role {
 		this.otherTeam = myTeam.opponent();
 		this.birthplace = rc.getLocation();
 		this.type = rc.getType();
+		this.state = IDLE;
 		if(type.equals(RobotType.TURRET) || type.equals(RobotType.TTM)) this.minRange = GameConstants.TURRET_MINIMUM_RANGE;
 		else this.minRange = 0;
 		this.attackRadiusSquared = type.attackRadiusSquared;

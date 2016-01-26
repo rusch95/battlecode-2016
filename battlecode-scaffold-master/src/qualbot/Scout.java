@@ -17,7 +17,6 @@ public class Scout extends Role {
 	private boolean providingBackup = false; //Overrides the current state
 	private int needsBackup;
 	private MapLocation backupFlag;
-	private MapLocation objectiveLocation; //Current objective for the robot to move to
 	
 	private static final int globalBroadcastRange = 10000; //TODO make this nice
 	
@@ -37,6 +36,9 @@ public class Scout extends Role {
 	//To be sorted
 	private short[] mapLongitudesVisited = new short[280]; //Divide the map into 5 width lane
 	
+	//Scout-specific states
+	public static final int SEARCHING = 90;
+	
 	public Scout(RobotController rc) {
 		super(rc);
 		this.dens = new ArrayList<MapLocation>();
@@ -55,6 +57,44 @@ public class Scout extends Role {
 				enemiesInRange = rc.senseHostileRobots(myLocation, attackRadiusSquared);
 				friendsInSight = rc.senseNearbyRobots(-1, myTeam);
 				scanSurroundings();
+				if(state == IDLE) {
+					if(dens.size() > 0) {//Siege a den if we can; the closest one to us
+						int minDistance = Integer.MAX_VALUE;
+						MapLocation denToSiege = dens.get(0);
+						for(MapLocation den : dens) {
+							int distance = den.distanceSquaredTo(myLocation);
+							if(distance < minDistance) {
+								minDistance = distance;
+								denToSiege = den;
+							}
+						}
+						state = SIEGING_DEN;
+						objectiveFlag = denToSiege;
+						rc.broadcastMessageSignal(Comms.createHeader(Comms.ATTACK_DEN), Comms.encodeLocation(denToSiege), globalBroadcastRange);
+					} else if( !enemyArchons.isEmpty() && rc.getRobotCount() > 20) { //Attack the nearest enemy Archon
+						int minDistance = Integer.MAX_VALUE;
+						MapLocation archonToSiege = null;
+						for(int archonID : enemyArchons.keySet()) {
+							MapLocation loc = enemyArchons.get(archonID);
+							int distance = myLocation.distanceSquaredTo(loc);
+							if(distance < minDistance) {
+								minDistance = distance;
+								archonToSiege = loc;
+							}
+						}
+						state = SIEGING_ENEMY;
+						objectiveFlag = archonToSiege;
+						rc.broadcastMessageSignal(Comms.createHeader(Comms.ATTACK_ENEMY), Comms.encodeLocation(archonToSiege), globalBroadcastRange);
+					} else {
+						state = SEARCHING;
+					}
+				} else if( state == SIEGING_DEN) {
+					
+				} else if( state == SIEGING_ENEMY) {
+					
+				} else if( state == SEARCHING) {
+					
+				}
 				
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
@@ -98,19 +138,19 @@ public class Scout extends Role {
 						break;
 					case Comms.ATTACK_DEN:
 						if(state == IDLE) {
-							targetFlag = loc;
-							state = SEIGING_DEN;
+							objectiveFlag = loc;
+							state = SIEGING_DEN;
 						}
 						break;
 					case Comms.DEN_DESTROYED:
-						if(state == SEIGING_DEN && targetFlag.equals(loc)) {
+						if(state == SIEGING_DEN && objectiveFlag.equals(loc)) {
 							state = IDLE;
 						}
 						break;
 					case Comms.ATTACK_ENEMY:
 						if(state == IDLE) {
-							targetFlag = loc;
-							state = SEIGING_ENEMY;
+							objectiveFlag = loc;
+							state = SIEGING_ENEMY;
 						}
 						break;
 					case Comms.NEED_BACKUP:
