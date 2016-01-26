@@ -49,7 +49,7 @@ public abstract class Role {
     protected MapLocation[] friendlyArchonStartPositions;
     protected MapLocation[] enemyArchonStartPositions;
     protected ZombieSpawnSchedule spawnSchedule;
-    protected Symmetry mapSymmetry;
+    protected Symmetry mapSymmetry; //0=XY,1=X, 2=Y, 3=XY
     protected MapLocation mapCenter;
     protected RobotInfo archonThatSpawnedMe;
     protected boolean atObjective;
