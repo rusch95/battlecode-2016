@@ -17,7 +17,6 @@ public class Scout extends Role {
 	private boolean providingBackup = false; //Overrides the current state
 	private int needsBackup;
 	private MapLocation backupFlag;
-	private MapLocation objectiveLocation; //Current objective for the robot to move to
 	
 	private static final int globalBroadcastRange = 10000; //TODO make this nice
 	
@@ -39,6 +38,9 @@ public class Scout extends Role {
 	//To be sorted
 	private short[] mapLongitudesVisited = new short[280]; //Divide the map into 5 width lane
 	
+	//Scout-specific states
+	public static final int SEARCHING = 90;
+	
 	public Scout(RobotController rc) {
 		super(rc);
 		this.dens = new ArrayList<MapLocation>();
@@ -58,7 +60,46 @@ public class Scout extends Role {
 				enemiesInRange = rc.senseHostileRobots(myLocation, attackRadiusSquared);
 				friendsInSight = rc.senseNearbyRobots(-1, myTeam);
 				scanSurroundings();
-				if (explore) {
+
+				if(state == IDLE) {
+					if(dens.size() > 0) {//Siege a den if we can; the closest one to us
+						int minDistance = Integer.MAX_VALUE;
+						MapLocation denToSiege = dens.get(0);
+						for(MapLocation den : dens) {
+							int distance = den.distanceSquaredTo(myLocation);
+							if(distance < minDistance) {
+								minDistance = distance;
+								denToSiege = den;
+							}
+						}
+						state = SIEGING_DEN;
+						objectiveFlag = denToSiege;
+						rc.broadcastMessageSignal(Comms.createHeader(Comms.ATTACK_DEN), Comms.encodeLocation(denToSiege), globalBroadcastRange);
+					} else if( !enemyArchons.isEmpty() && rc.getRobotCount() > 20) { //Attack the nearest enemy Archon
+						int minDistance = Integer.MAX_VALUE;
+						MapLocation archonToSiege = null;
+						for(int archonID : enemyArchons.keySet()) {
+							MapLocation loc = enemyArchons.get(archonID);
+							int distance = myLocation.distanceSquaredTo(loc);
+							if(distance < minDistance) {
+								minDistance = distance;
+								archonToSiege = loc;
+							}
+						}
+						state = SIEGING_ENEMY;
+						objectiveFlag = archonToSiege;
+						rc.broadcastMessageSignal(Comms.createHeader(Comms.ATTACK_ENEMY), Comms.encodeLocation(archonToSiege), globalBroadcastRange);
+					} else {
+						state = SEARCHING;
+					}
+				}
+				
+				//Don't waste a round changing state
+				if( state == SIEGING_DEN) {
+					
+				} else if( state == SIEGING_ENEMY) {
+					
+				} else if( state == SEARCHING) {
 					
 				}
 				
@@ -106,6 +147,7 @@ public class Scout extends Role {
 						if (!dens.contains(loc)) {
 							dens.add(loc);
 							predictedDens.remove(loc);
+							predictedDens.add(mirroredLocation(loc, mapSymmetry));
 						}
 						break;
 					case Comms.PREDICTED_DEN_NOT_FOUND:
@@ -114,22 +156,22 @@ public class Scout extends Role {
 						
 					case Comms.ATTACK_DEN:
 						if(state == IDLE) {
-							targetFlag = loc;
-							state = SEIGING_DEN;
+							objectiveFlag = loc;
+							state = SIEGING_DEN;
 						}
 						break;
 					case Comms.DEN_DESTROYED:
 						if(!dens.remove(loc)); //Remove if in dens
 							predictedDens.remove(loc); //Remove from predicted if not in dens somehow
 						destroyedDens.add(loc);
-						if(state == SEIGING_DEN && targetFlag.equals(loc)) {
+						if(state == SIEGING_DEN && objectiveFlag.equals(loc)) {
 							state = IDLE;
 						}
 						break;
 					case Comms.ATTACK_ENEMY:
 						if(state == IDLE) {
-							targetFlag = loc;
-							state = SEIGING_ENEMY;
+							objectiveFlag = loc;
+							state = SIEGING_ENEMY;
 						}
 						break;
 					case Comms.NEED_BACKUP:
@@ -174,6 +216,7 @@ public class Scout extends Role {
 			if(enemy.type.equals(RobotType.ZOMBIEDEN) && !dens.contains(enemy.location)) {
 				dens.add(enemy.location);
 				predictedDens.remove(enemy.location);
+				predictedDens.add(mirroredLocation(enemy.location, mapSymmetry));
 				rc.broadcastMessageSignal(Comms.createHeader(Comms.DEN_FOUND), Comms.encodeLocation(enemy.location), globalBroadcastRange);
 				messages++;
 			} else if(enemy.type.equals(RobotType.ARCHON)) {
@@ -202,7 +245,7 @@ public class Scout extends Role {
 			if(messages > 10) break;
 		}
 		
-		if (!rc.isCoreReady()) { //Amortize
+		if (!rc.isCoreReady()) { 
 			for (MapLocation den:dens) {
 				int distanceToDen = myLocation.distanceSquaredTo(den);
 				if (distanceToDen <= sensorRadiusSquared) {
