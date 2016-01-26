@@ -91,19 +91,20 @@ public class Archon extends Role {
 					RobotInfo neutralBot = neutralBotTup.x;
 					double neutralValue = neutralBotTup.y;
 					
+					MapLocation randomFlag = null;
 					if (neutralValue != 0) {
 						if (rc.getLocation().isAdjacentTo(neutralBot.location) && rc.isCoreReady()) { //Magic indicating adjacent bot
 							rc.activate(neutralBot.location);
 						} else if (neutralValue > ACTIVATE_BOT_THRESHOLD || (neutralBot != null && enemies.length == 0)) { //Magic
 							if (neutralBot != null)
-								objectiveFlag = neutralBot.location;
-								gotoObjective(objectiveFlag, 0, objectiveMargin+15, friendsInSight);
+								randomFlag = neutralBot.location;
+								gotoObjective(randomFlag, 0, objectiveMargin+15, friendsInSight);
 						} 
 					}
 					if (partsValue / rc.getTeamParts() > GET_PARTS_THRESHOLD || (enemies.length == 0)) { //Magic
 						if (partsLoc != null) {
-							objectiveFlag = partsLoc;
-							gotoObjective(objectiveFlag, 0, 0, friendsInSight);
+							randomFlag = partsLoc;
+							gotoObjective(randomFlag, 0, 0, friendsInSight);
 						}
 					}
 				}
@@ -117,7 +118,8 @@ public class Archon extends Role {
 				
 				flee(enemies);
 				
-				if (rc.getTeamParts() < 300) anyGoodies(friendsInSight);
+				
+					gotoObjective(objectiveFlag, 49, 350, friendsInSight);
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
 	            e.printStackTrace();
@@ -264,6 +266,23 @@ public class Archon extends Role {
 						if(!maxYFound) {
 							maxY = aux;
 							maxYFound = true;
+						}
+						break;
+					case Comms.ATTACK_DEN:
+						if(state == IDLE) {
+							objectiveFlag = loc;
+							state = SIEGING_DEN;
+						}
+						break;
+					case Comms.DEN_DESTROYED:
+						if(state == SIEGING_DEN && objectiveFlag.equals(loc)) {
+							state = IDLE;
+						}
+						break;
+					case Comms.ATTACK_ENEMY:
+						if(state == IDLE) {
+							objectiveFlag = loc;
+							state = SIEGING_ENEMY;
 						}
 						break;
 					case Comms.PARTS_FOUND:
