@@ -38,7 +38,7 @@ public class Archon extends Role {
 				//TEST CODE PLEASE IGNORE
 				if(rc.getTeamParts() > 130) {
 					if(chance(0.85)) tryToBuild(RobotType.SOLDIER);
-					else if(chance(0.5)) tryToBuild(RobotType.SCOUT);
+					else if(chance(0.9)) tryToBuild(RobotType.SCOUT);
 					else tryToBuild(RobotType.TURRET);
 				}
 			} catch (Exception e) {

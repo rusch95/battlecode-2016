@@ -31,10 +31,10 @@ public class Scout extends Role {
 	private final ArrayList<MapLocation> destroyedDens;
 	private final HashMap<Integer, MapLocation> enemyArchons; //Enemy Archon IDs and last known locations
 	private final ArrayList<MapLocation> neutrals;
-	private byte[] fineBlocks = new byte[500];
-	private HashMap<MapLocation, Integer> fineMap;
-	private HashMap<MapLocation, Integer> roughMap;
+	private HashMap<MapLocation, Boolean> fineMap;
+	private HashMap<MapLocation, Short> roughMap;
 	private final ArrayList<MapLocation> parts;
+	
 	
 	//Robots Seen
 	private RobotInfo[] enemiesInSight;
@@ -43,11 +43,14 @@ public class Scout extends Role {
 	
 	private boolean atObjective = false;
 	private boolean findingOtherBounds = false;
+	private boolean mapExplored = false;
 	 
 	//To be sorted
 	private Direction cornerDirectionSearch = Direction.NONE;
 	boolean checkAwayFromCenter;
 	MapLocation trueCenter;
+	private MapLocation searchFlag;
+	private final int timeout = 150;
 	
 	//Scout-specific states
 	public static final int SEARCHING = 90;
@@ -59,10 +62,9 @@ public class Scout extends Role {
 		this.destroyedDens = new ArrayList<MapLocation>();
 		this.enemyArchons = new HashMap<Integer, MapLocation>();
 		this.neutrals = new ArrayList<MapLocation>();
-		this.fineMap = new HashMap<MapLocation, Integer>(400);
-		this.roughMap = new HashMap<MapLocation, Integer>(100);
+		this.fineMap = new HashMap<MapLocation, Boolean>(500);
+		this.roughMap = new HashMap<MapLocation, Short>(500);
 		this.parts = new ArrayList<MapLocation>();
-
 	}
 
 	@Override
@@ -126,7 +128,7 @@ public class Scout extends Role {
 						state = SIEGING_ENEMY;
 						objectiveFlag = archonToSiege;
 						rc.broadcastMessageSignal(Comms.createHeader(Comms.ATTACK_ENEMY), Comms.encodeLocation(archonToSiege), globalBroadcastRange);
-					} else {
+					} else if (!mapExplored){
 						state = SEARCHING;
 					}
 				}
@@ -138,18 +140,56 @@ public class Scout extends Role {
 					gotoObjective(objectiveFlag, 30, 40, friendsInSight);
 					if(rc.getRoundNum()%200 == 0) state = IDLE; //TODO make this better
 				} else if( state == SEARCHING) {
-					boolean noCorners = !(minXFound || maxXFound || minYFound || maxYFound);
-					if (noCorners) {
-						Direction dirToGo = rc.getLocation().directionTo(mapCenter).opposite();
-						if (dirToGo == Direction.EAST || dirToGo == Direction.NORTH) {
-							dirToGo = Direction.NORTH_EAST;
-						} else if (dirToGo == Direction.SOUTH || dirToGo == Direction.WEST) {
-							dirToGo = Direction.SOUTH_WEST;
+				
+					boolean breakout = false;
+					int timeout = 150;
+					
+					if (searchFlag != null) {
+						rc.setIndicatorString(0, "X: "+searchFlag.x + " Y: "+searchFlag.y);
+						if (searchFlag.x > maxX || searchFlag.y > maxY || searchFlag.x < minX || searchFlag.y < minY) {
+							rc.broadcastMessageSignal(Comms.createHeader(Comms.FINISHED_ROUGH_BLOCK), Comms.encodeLocation(searchFlag), globalBroadcastRange);
+							roughMap.put(searchFlag, (short) 0);
+							searchFlag = null;
+						} else if (gotoObjective(searchFlag, 3, 7, friendsInSight)) {					
+							rc.broadcastMessageSignal(Comms.createHeader(Comms.FINISHED_ROUGH_BLOCK), Comms.encodeLocation(searchFlag), globalBroadcastRange);
+							roughMap.put(searchFlag, (short) 0);
+							searchFlag = null;
 						}
-						tryToMove(dirToGo);
 					} else {
-						if (mapSymmetry == Symmetry.XY || mapSymmetry == Symmetry.XY_STRONG) {
-							trueCenter = mapCenter;
+						for (int i=0; i<11; i++) {
+							for(int x=-i; x<i; x++) {
+								for (int y=-i; y<i; y++) {
+									if (i==11) {
+										mapExplored = true;
+									}
+									
+									int xOff = myLocation.x + x * 5;
+									int yOff = myLocation.y + y * 5;
+									xOff = xOff - (xOff % 5);
+									yOff = yOff - (yOff % 5);
+									
+									if (xOff > maxX || yOff > maxY || xOff < minX || yOff < minY) {
+										continue;
+									}
+									
+									MapLocation blockCenter = new MapLocation(xOff, yOff);
+									if (roughMap.containsKey(blockCenter)) {
+										if (roughMap.get(blockCenter) > rc.getRoundNum()) {
+											rc.broadcastMessageSignal(Comms.createHeader(Comms.STARTING_ROUGH_BLOCK), Comms.encodeLocation(blockCenter), globalBroadcastRange);
+											roughMap.put(blockCenter, (short)(rc.getRoundNum() + timeout));
+											searchFlag = blockCenter;
+											breakout = true;
+										}
+									} else {
+										rc.broadcastMessageSignal(Comms.createHeader(Comms.STARTING_ROUGH_BLOCK), Comms.encodeLocation(blockCenter), globalBroadcastRange);
+										searchFlag = blockCenter;
+										breakout = true;
+									}
+									if (breakout) break;
+								}
+								if (breakout) break;
+							}
+							if (breakout) break;
 						}
 					}
 					if(!dens.isEmpty() || !enemyArchons.isEmpty()) {
@@ -250,6 +290,12 @@ public class Scout extends Role {
 					case Comms.PARTS_FOUND:
 						parts.add(loc);
 						break;
+					case Comms.STARTING_ROUGH_BLOCK:
+						roughMap.put(loc, (short)(rc.getRoundNum() + timeout));
+						
+					case Comms.FINISHED_ROUGH_BLOCK:
+						roughMap.put(loc, (short) 0);
+						
 					default:
 						//
 				}

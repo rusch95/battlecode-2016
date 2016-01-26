@@ -29,6 +29,8 @@ public class Comms {
 	public static final int NO_LONGER_NEED_BACKUP = 76;
 	public static final int SCOUT_DYING = 40; //A scout's dying hail mary
 	public static final int PARTS_FOUND = 44; //Found a parts pile
+	public static final int STARTING_ROUGH_BLOCK = 111;
+	public static final int FINISHED_ROUGH_BLOCK = 120;
 	
 	public static final int NEUTRAL_FOUND = 43; //Found a neutral unit
 	
