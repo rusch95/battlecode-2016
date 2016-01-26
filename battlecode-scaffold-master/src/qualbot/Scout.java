@@ -6,6 +6,7 @@ import java.util.HashMap;
 import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
+import battlecode.common.GameConstants;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
@@ -57,10 +58,26 @@ public class Scout extends Role {
 				handleMessages(); //TODO Possibly amortize to every other turn if bytecode gets too high
 				myLocation = rc.getLocation();
 				enemiesInSight = rc.senseHostileRobots(myLocation, -1);
-				enemiesInRange = rc.senseHostileRobots(myLocation, attackRadiusSquared);
 				friendsInSight = rc.senseNearbyRobots(-1, myTeam);
 				scanSurroundings();
 
+				RobotInfo nearestTurret = null;
+				int minDist = Integer.MAX_VALUE;
+				for(RobotInfo friend : friendsInSight) {
+					if(friend.type == RobotType.TURRET) {
+						int distance = myLocation.distanceSquaredTo(friend.location);
+						if(distance < minDist) {
+							nearestTurret = friend;
+							minDist = distance;
+						}
+					}
+				}
+				
+				if(nearestTurret != null && enemiesInSight.length > 0) {
+					RobotInfo targetEnemy = getAttackTarget(enemiesInSight, GameConstants.TURRET_MINIMUM_RANGE, nearestTurret.location);
+					rc.broadcastMessageSignal(Comms.createHeader(Comms.TURRET_ATTACK_HERE), Comms.encodeLocation(targetEnemy.location), RobotType.SCOUT.sensorRadiusSquared);
+				}
+				
 				if(state == IDLE) {
 					if(dens.size() > 0) {//Siege a den if we can; the closest one to us
 						int minDistance = Integer.MAX_VALUE;
@@ -161,7 +178,7 @@ public class Scout extends Role {
 						}
 						break;
 					case Comms.DEN_DESTROYED:
-						if(!dens.remove(loc)); //Remove if in dens
+						if(!dens.remove(loc)) //Remove if in dens
 							predictedDens.remove(loc); //Remove from predicted if not in dens somehow
 						destroyedDens.add(loc);
 						if(state == SIEGING_DEN && objectiveFlag.equals(loc)) {
@@ -186,6 +203,7 @@ public class Scout extends Role {
 						break;
 					case Comms.ENEMY_ARCHON_SIGHTED:
 						enemyArchons.put(aux, loc);
+						break;
 					default:
 						System.out.println("Code not implemented: " + code);
 				}

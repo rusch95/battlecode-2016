@@ -13,7 +13,6 @@ import battlecode.common.Signal;
 public class Turret extends Role {
 	//Robots Seen
 	private RobotInfo[] enemiesInSight;
-	private RobotInfo[] enemiesInRange;
 	private RobotInfo[] friendsInSight;
 	
 	//Misc State fields
@@ -23,12 +22,10 @@ public class Turret extends Role {
 	private MapLocation objectiveFlag; //Current objective for the robot to move to
 	private int objectiveMargin = 0; //This controls how close they get to an objective, such as one step away from dens
 	private boolean atObjective=false; //True if the robot has entered the required margin for the objective
-	private RobotInfo targetEnemy;
+	private MapLocation targetEnemy;
 	
 	public Turret(RobotController rc) {
 		super(rc);
-		objectiveFlag = mapCenter;
-		// TODO Auto-generated constructor stub
 	}
 
 	@Override
@@ -37,14 +34,25 @@ public class Turret extends Role {
 			try {
 				myLocation = rc.getLocation();
 				enemiesInSight = rc.senseHostileRobots(myLocation, -1);
+				targetEnemy = null;
+				handleMessages();
 				if (rc.getType() == RobotType.TURRET) {
-					handleMessages();
-					if (enemiesInSight.length == 0)
-						rc.pack();
+					if(state == IDLE) {
+						dealDamage();
+					} else if (state == SIEGING_DEN) {
+						dealDamage();
+						if(enemiesInSight.length == 0 && !atObjective) {
+							rc.pack();
+						}
+					} else if (state == SIEGING_ENEMY) {
+						dealDamage();
+						if(enemiesInSight.length == 0 && !atObjective) {
+							rc.pack();
+						}
+					}
 				} else if (rc.getType() == RobotType.TTM) {
-					handleMessages();
-					if (enemiesInSight.length > 0) {
-						//Unpack if we see enemies
+					if (targetEnemy != null || enemiesInSight.length > 0) {
+						//Unpack if we see enemies or our recon does
 						rc.unpack();
 					} else {
 						gotoObjective(objectiveFlag, objectiveMargin, objectiveMargin+15, friendsInSight);
@@ -55,10 +63,26 @@ public class Turret extends Role {
 	            e.printStackTrace();
 	    	}
 			Clock.yield(); //TODO: Move this? Exceptions waste a round this way
-			
 		}
 	}
 
+	/**
+	 * Attack a priority target if we can.
+	 * @throws GameActionException 
+	 */
+	private void dealDamage() throws GameActionException {
+		if(rc.isWeaponReady()) {
+			RobotInfo nearbyTarget = null;
+			if(enemiesInSight.length > 0) {
+				nearbyTarget = getAttackTarget(enemiesInSight, minRange, myLocation);
+			}
+			if(nearbyTarget != null) {
+				targetEnemy = nearbyTarget.location;
+			}
+			if( targetEnemy != null && rc.canAttackLocation(targetEnemy)) rc.attackLocation(targetEnemy);
+		}
+	}
+	
 	@Override
 	protected void handleMessage(Signal message) {
 		if(message.getTeam().equals(myTeam)) {
@@ -91,6 +115,9 @@ public class Turret extends Role {
 							maxY = aux;
 							maxYFound = true;
 						}
+						break;
+					case Comms.TURRET_ATTACK_HERE:
+						if(rc.canAttackLocation(loc)) targetEnemy = loc;
 						break;
 				}
 			}
