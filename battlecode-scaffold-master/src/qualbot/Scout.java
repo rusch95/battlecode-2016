@@ -71,7 +71,7 @@ public class Scout extends Role {
 	public void run() {
 		while(true) {
 			try {
-				handleMessages(); //TODO Possibly amortize to every other turn if bytecode gets too high
+				handleMessages();
 				myLocation = rc.getLocation();
 				enemiesInSight = rc.senseHostileRobots(myLocation, -1);
 				friendsInSight = rc.senseNearbyRobots(-1, myTeam);
@@ -143,7 +143,7 @@ public class Scout extends Role {
 					gotoObjective(objectiveFlag, 30, 40, friendsInSight);
 				} else if( state == SIEGING_ENEMY) {
 					gotoObjective(objectiveFlag, 30, 40, friendsInSight);
-					if(rc.getRoundNum()%200 == 0) state = IDLE; //TODO make this better
+					if(rc.getRoundNum()%100 == 0) state = IDLE; //TODO make this better
 				} else if( state == SEARCHING) {
 				
 					boolean breakout = false;

@@ -119,6 +119,14 @@ public class Turret extends Role {
 					case Comms.TURRET_ATTACK_HERE:
 						if(rc.canAttackLocation(loc)) targetEnemy = loc;
 						break;
+					case Comms.ATTACK_DEN:
+						state = SIEGING_DEN;
+						objectiveFlag = loc;
+						break;
+					case Comms.ATTACK_ENEMY:
+						state = SIEGING_ENEMY;
+						objectiveFlag = loc;
+						break;
 				}
 			}
 			else { //Basic message

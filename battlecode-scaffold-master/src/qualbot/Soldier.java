@@ -42,6 +42,7 @@ public class Soldier extends Role {
 					targetEnemy = getAttackTarget(enemiesInRange, minRange, myLocation);
 					dealDamage();
 					kite(targetEnemy);
+					cyanidePill();
 				} else if(enemiesInSight.length > 0) {
 					targetEnemy = getAttackTarget(enemiesInSight, minRange, myLocation);
 					kite(targetEnemy);
