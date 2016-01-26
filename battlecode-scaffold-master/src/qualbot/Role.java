@@ -233,6 +233,15 @@ public abstract class Role {
 	}
 	
 	/**
+	 * Return a random direction, using the caller's Random object.
+	 * @param rand Random
+	 * @return a random Direction.
+	 */
+	public Direction getRandomDirection() {
+		return directions[rand.nextInt(8)];
+	}
+	
+	/**
 	 * Moves in the optimal direction to avoid nearby enemies.
 	 * myLocation must be up to date.
 	 * @throws GameActionException 

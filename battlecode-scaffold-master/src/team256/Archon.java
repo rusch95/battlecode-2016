@@ -127,9 +127,9 @@ public class Archon implements Role {
 				RobotInfo[] friends = rc.senseNearbyRobots(-1, myTeam);
 				
 				
-				if (enemies.length == 0 && beingAttacked) {
+				if (enemies != null && enemies.length == 0 && beingAttacked) {
 					beingSniped = true;
-				} else if (enemies.length > 0){
+				} else if (enemies != null && enemies.length > 0){
 					beingSniped = false;
 					lastSeenEnemyLoc = enemies[0].location;
 				} else {
