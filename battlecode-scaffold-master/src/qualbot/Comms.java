@@ -98,8 +98,7 @@ public class Comms {
 	 * @return int representing encoded location
 	 */
 	public static int encodeLocation(MapLocation loc) {
-		int yCoordLength = String.valueOf(GameConstants.MAP_MAX_HEIGHT).length();
-		int mesg = loc.x * ( (int) Math.pow(10, yCoordLength) ) + loc.y; //Encodes as XXXX_YYYY for 4digit max height
+		int mesg = loc.x * ( (int) Math.pow(10, 3) ) + loc.y; //Encodes as XXXX_YYYY for 4digit max height
 		return mesg;
 	}
 	
@@ -109,9 +108,8 @@ public class Comms {
 	 * @return MapLocation corresponding to message
 	 */
 	public static MapLocation decodeLocation(int message) {
-		int yCoordLength = String.valueOf(GameConstants.MAP_MAX_HEIGHT).length();
-		int y = message % ( (int) Math.pow(10, yCoordLength) );
-		int x = (message - y) / ( (int) Math.pow(10, yCoordLength) );
+		int y = message % ( (int) Math.pow(10, 3) );
+		int x = (message - y) / ( (int) Math.pow(10, 3) );
 		return new MapLocation(x,y);
 	}
 	
