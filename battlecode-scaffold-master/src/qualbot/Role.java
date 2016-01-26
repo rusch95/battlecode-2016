@@ -269,12 +269,15 @@ public abstract class Role {
 	 * corresponding to the lane this matches up with
 	 * TODO Unit test this shit
 	 */
+	
+	static int LONGITUDE_WIDTH = 5;
+	static int MAX_MAP_SIZE = 100;
 	@SuppressWarnings("incomplete-switch")
 	protected int longitudeIndex(MapLocation location, Direction direction) {
-		int directionOffset=0;
-		int locationOffset=0;
-		int offsetX = mapCenter.x + 50 - location.x;
-		int offsetY = mapCenter.y + 50 - location.y;
+		int directionOffset=0; //Sets aside area in array for each longitude type
+		int locationOffset=0; //Corresponds to the offset function for each longitude direction
+		int offsetX = mapCenter.x + MAX_MAP_SIZE / 2 - location.x;
+		int offsetY = mapCenter.y + MAX_MAP_SIZE / 2 - location.y;
 		switch (direction){
 			case NORTH:
 			case SOUTH:
@@ -284,20 +287,22 @@ public abstract class Role {
 			case WEST:
 			case EAST:
 				locationOffset = offsetY;
-				directionOffset = 41;
+				directionOffset = MAX_MAP_SIZE / LONGITUDE_WIDTH + 2;
 				break;
 			case NORTH_EAST:
 			case SOUTH_WEST:
+				//Figures out Y = X offset
 				locationOffset = (offsetX - offsetY) + 40;
-				directionOffset = 82;
+				directionOffset = (MAX_MAP_SIZE / LONGITUDE_WIDTH + 2) * 2 * 2;
 				break;
 			case NORTH_WEST:
 			case SOUTH_EAST:
+				//Figures out Y = -X offset
 				locationOffset = (offsetX + offsetY);
-				directionOffset = 163;
+				directionOffset = (MAX_MAP_SIZE / LONGITUDE_WIDTH + 2) * 3 * 4; //3 for being third; 4 for the extra space taken by diagonals 
 				break;
 		} 
-		return locationOffset / 5 + directionOffset;
+		return locationOffset / LONGITUDE_WIDTH + directionOffset;
 	}
 	
 	//protected MapLocation longitudeBeginning();
