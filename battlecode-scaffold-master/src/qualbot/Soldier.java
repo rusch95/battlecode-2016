@@ -36,7 +36,7 @@ public class Soldier extends Role {
 		super(rc);
 		
 		//TEST CODE
-		if(archonThatSpawnedMe != null) this.backupFlag = archonThatSpawnedMe.location;
+		objectiveFlag = enemyArchonStartPositions[0];
 	}
 
 	@Override
@@ -50,17 +50,12 @@ public class Soldier extends Role {
 				friendsInSight = rc.senseNearbyRobots(-1, myTeam);
 				handleMessages(); //TODO Possibly amortize to every other turn if bytecode gets too high
 
-				if(enemiesInSight.length > 0) {
+				if(enemiesInRange.length > 0) {
+					targetEnemy = getAttackTarget(enemiesInRange, minRange, myLocation);
+					kite(targetEnemy);
+				} else if(enemiesInSight.length > 0) {
 					targetEnemy = getAttackTarget(enemiesInSight, minRange, myLocation);
-					Direction toTarget = myLocation.directionTo(targetEnemy.location);
-					int currentDistance = myLocation.distanceSquaredTo(targetEnemy.location);
-					int kiteDistance = myLocation.add(toTarget.opposite()).distanceSquaredTo(targetEnemy.location);
-					
-					if(kiteDistance <= attackRadiusSquared && targetEnemy.type != RobotType.ZOMBIEDEN) {
-						tryToMove(toTarget.opposite());
-					} else if (currentDistance > attackRadiusSquared) {
-						tryToMove(toTarget);
-					}
+					kite(targetEnemy);
 				} else if(providingBackup) { //supercedes the current state
 					gotoObjective(backupFlag, objectiveMargin, objectiveMargin+15);
 				} else { //execute the current state
@@ -76,6 +71,23 @@ public class Soldier extends Role {
 		}
 	}
 
+	/**
+	 * Kite-moves away from a given enemy
+	 * @param kitingTarget
+	 * @throws GameActionException
+	 */
+	private void kite(RobotInfo kitingTarget) throws GameActionException {
+		Direction toTarget = myLocation.directionTo(kitingTarget.location);
+		int currentDistance = myLocation.distanceSquaredTo(kitingTarget.location);
+		int kiteDistance = myLocation.add(toTarget.opposite()).distanceSquaredTo(kitingTarget.location);
+		
+		if(kiteDistance <= attackRadiusSquared && targetEnemy.type != RobotType.ZOMBIEDEN) {
+			tryToMove(toTarget.opposite());
+		} else if (currentDistance > attackRadiusSquared) {
+			tryToMove(toTarget);
+		}
+	}
+	
 	@Override
 	protected void handleMessage(Signal message) {
 		if(message.getTeam().equals(myTeam)) {
@@ -142,15 +154,6 @@ public class Soldier extends Role {
 				
 			}
 		}
-	}
-
-	/**
-	 * Attack a target, and then move to avoid enemies.
-	 * @throws GameActionException 
-	 */
-	private void kite() throws GameActionException{
-		dealDamage();
-		dodgeEnemies();
 	}
 	
 	private void dealDamage() throws GameActionException {
