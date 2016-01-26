@@ -57,9 +57,9 @@ public class Guard extends Role {
 					targetEnemy = getAttackTarget(enemiesInSight, minRange, myLocation);
 					kite(targetEnemy);
 				} else if(providingBackup) { //supercedes the current state
-					gotoObjective(backupFlag, objectiveMargin, objectiveMargin+15);
+					gotoObjective(backupFlag, objectiveMargin, objectiveMargin+15, friendsInSight);
 				} else { //execute the current state
-					gotoObjective(objectiveFlag, objectiveMargin, objectiveMargin+15);
+					gotoObjective(objectiveFlag, objectiveMargin, objectiveMargin+15, friendsInSight);
 				}
 				dealDamage();
 				

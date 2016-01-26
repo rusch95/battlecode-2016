@@ -12,7 +12,7 @@ import battlecode.common.Signal;
 
 public class Archon extends Role {
 	protected ArrayList<MapLocation> dens;
-	
+	protected int objectiveMargin = 0;
 	
 	public Archon(RobotController rc) {
 		super(rc);
@@ -26,6 +26,10 @@ public class Archon extends Role {
 				handleMessages();
 				healAlly();
 				myLocation = rc.getLocation();
+				MapLocation objectiveFlag = enemyArchonStartPositions[0];
+				RobotInfo[] friendsInSight = rc.senseNearbyRobots(-1, myTeam);
+				if (rc.getTeamParts() < 200)
+				gotoObjective(objectiveFlag, objectiveMargin, objectiveMargin+15, friendsInSight);
 				
 				//TEST CODE PLEASE IGNORE
 				tryToBuild(RobotType.SOLDIER);
