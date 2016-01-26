@@ -29,6 +29,8 @@ public class Comms {
 	public static final int SCOUT_DYING = 40; //A scout's dying hail mary
 	public static final int PARTS_FOUND = 44; //Found a parts pile
 	
+	public static final int NEUTRAL_FOUND = 43; //Found a neutral unit
+	
 	public static final int FOUND_MINX = 45; //Found map boundaries
 	public static final int FOUND_MAXX = 46;
 	public static final int FOUND_MINY = 47;

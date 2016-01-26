@@ -1,6 +1,7 @@
 package qualbot;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import battlecode.common.Clock;
 import battlecode.common.GameActionException;
@@ -12,11 +13,13 @@ import battlecode.common.Signal;
 
 public class Archon extends Role {
 	protected ArrayList<MapLocation> dens;
-	
+	private HashMap<MapLocation, Integer> parts;
+	private ArrayList<MapLocation> neutrals;
 	
 	public Archon(RobotController rc) {
 		super(rc);
-		// TODO Auto-generated constructor stub
+		this.parts = new HashMap<MapLocation, Integer>();
+		this.neutrals = new ArrayList<MapLocation>();
 	}
 
 	@Override
@@ -74,6 +77,12 @@ public class Archon extends Role {
 							maxYFound = true;
 						}
 						break;
+					case Comms.PARTS_FOUND:
+						parts.put(loc, aux);
+						break;
+					case Comms.NEUTRAL_FOUND:
+						neutrals.add(loc);
+						break;
 				}
 			}
 			else { //Basic message
@@ -81,7 +90,7 @@ public class Archon extends Role {
 			}
 		}
 	}
-
+	
 	/**
 	 * Heals the weakest nearby friendly
 	 * @throws GameActionException 

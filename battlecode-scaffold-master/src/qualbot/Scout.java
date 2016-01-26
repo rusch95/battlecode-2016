@@ -11,6 +11,7 @@ import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import battlecode.common.Signal;
+import battlecode.common.Team;
 
 public class Scout extends Role {
 	private boolean providingBackup = false; //Overrides the current state
@@ -24,6 +25,7 @@ public class Scout extends Role {
 	private final ArrayList<MapLocation> dens;
 	private final ArrayList<MapLocation> predictedDens; //Guesses about den locations based on symmetry
 	private final HashMap<Integer, MapLocation> enemyArchons; //Enemy Archon IDs and last known locations
+	private final ArrayList<MapLocation> neutrals;
 	
 	//Robots Seen
 	private RobotInfo[] enemiesInSight;
@@ -40,6 +42,7 @@ public class Scout extends Role {
 		this.dens = new ArrayList<MapLocation>();
 		this.predictedDens = new ArrayList<MapLocation>();
 		this.enemyArchons = new HashMap<Integer, MapLocation>();
+		this.neutrals = new ArrayList<MapLocation>();
 	}
 
 	@Override
@@ -148,6 +151,15 @@ public class Scout extends Role {
 			}
 		}
 		
+		for(RobotInfo neutral : rc.senseNearbyRobots(-1, Team.NEUTRAL)) {
+			if(!neutrals.contains(neutral.location)) {
+				neutrals.add(neutral.location);
+				rc.broadcastMessageSignal(Comms.createHeader(Comms.NEUTRAL_FOUND), Comms.encodeLocation(neutral.location), globalBroadcastRange);
+				messages++;
+				if(messages > 10) break;
+			}
+		}
+		
 		MapLocation[] parts = rc.sensePartLocations(RobotType.ARCHON.sensorRadiusSquared);
 		for(MapLocation pile : parts) {
 			double value = rc.senseParts(pile);
@@ -155,7 +167,7 @@ public class Scout extends Role {
 				rc.broadcastMessageSignal(Comms.createHeader(Comms.PARTS_FOUND, (int)value), Comms.encodeLocation(pile), globalBroadcastRange);
 				messages++;
 			}
-			if(messages > 15) break;
+			if(messages > 10) break;
 		}
 		
 	}
