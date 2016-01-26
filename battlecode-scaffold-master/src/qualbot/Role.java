@@ -334,12 +334,14 @@ public abstract class Role {
 				}		
 				//Move torwards some friend if they are closer to the goal than us
 				RobotInfo friendCloserToGoal = null;
-				for(RobotInfo robot:friendsInSight){
-					//First let's find a friend that fits our profile
-					int robotDistanceToGoal = robot.location.distanceSquaredTo(flag);
-					if ((robotDistanceToGoal - closerToGoalThreshold) > distanceToObjective && myLocation.distanceSquaredTo(robot.location) < tooFarAwayThreshold) {			
-						friendCloserToGoal = robot;
-						break;
+				if (friendsInSight != null) {
+					for(RobotInfo robot:friendsInSight){
+						//First let's find a friend that fits our profile
+						int robotDistanceToGoal = robot.location.distanceSquaredTo(flag);
+						if ((robotDistanceToGoal - closerToGoalThreshold) > distanceToObjective && myLocation.distanceSquaredTo(robot.location) < tooFarAwayThreshold) {			
+							friendCloserToGoal = robot;
+							break;
+						}
 					}
 				}
 				//TODO Replace with a better movement towards friend, such as sideways in the friends direction

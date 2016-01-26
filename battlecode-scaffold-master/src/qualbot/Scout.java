@@ -24,6 +24,7 @@ public class Scout extends Role {
 	//Objectives Information
 	private final ArrayList<MapLocation> dens;
 	private final ArrayList<MapLocation> predictedDens; //Guesses about den locations based on symmetry
+	private final ArrayList<MapLocation> destroyedDens;
 	private final HashMap<Integer, MapLocation> enemyArchons; //Enemy Archon IDs and last known locations
 	private final ArrayList<MapLocation> neutrals;
 	
@@ -33,6 +34,7 @@ public class Scout extends Role {
 	private RobotInfo[] friendsInSight;
 	
 	private boolean atObjective = false;
+	private boolean explore = false;
 	 
 	//To be sorted
 	private short[] mapLongitudesVisited = new short[280]; //Divide the map into 5 width lane
@@ -41,6 +43,7 @@ public class Scout extends Role {
 		super(rc);
 		this.dens = new ArrayList<MapLocation>();
 		this.predictedDens = new ArrayList<MapLocation>();
+		this.destroyedDens = new ArrayList<MapLocation>();
 		this.enemyArchons = new HashMap<Integer, MapLocation>();
 		this.neutrals = new ArrayList<MapLocation>();
 	}
@@ -55,6 +58,9 @@ public class Scout extends Role {
 				enemiesInRange = rc.senseHostileRobots(myLocation, attackRadiusSquared);
 				friendsInSight = rc.senseNearbyRobots(-1, myTeam);
 				scanSurroundings();
+				if (explore) {
+					
+				}
 				
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
@@ -96,6 +102,16 @@ public class Scout extends Role {
 							maxYFound = true;
 						}
 						break;
+					case Comms.DEN_FOUND:
+						if (!dens.contains(loc)) {
+							dens.add(loc);
+							predictedDens.remove(loc);
+						}
+						break;
+					case Comms.PREDICTED_DEN_NOT_FOUND:
+						predictedDens.remove(loc);
+						break;
+						
 					case Comms.ATTACK_DEN:
 						if(state == IDLE) {
 							targetFlag = loc;
@@ -103,6 +119,9 @@ public class Scout extends Role {
 						}
 						break;
 					case Comms.DEN_DESTROYED:
+						if(!dens.remove(loc)); //Remove if in dens
+							predictedDens.remove(loc); //Remove from predicted if not in dens somehow
+						destroyedDens.add(loc);
 						if(state == SEIGING_DEN && targetFlag.equals(loc)) {
 							state = IDLE;
 						}
@@ -123,10 +142,23 @@ public class Scout extends Role {
 							providingBackup = false;
 						}
 						break;
+					case Comms.ENEMY_ARCHON_SIGHTED:
+						enemyArchons.put(aux, loc);
+					default:
+						System.out.println("Code not implemented: " + code);
 				}
 			}
 			else { //Basic message
-				
+			}
+		} else { //Enemy message //TODO Use this for army
+			if (enemyArchons.containsKey(message.getID())) {
+				enemyArchons.put(message.getID(), message.getLocation());
+				try {
+					rc.broadcastMessageSignal(Comms.createHeader(Comms.ENEMY_ARCHON_SIGHTED, message.getID()), Comms.encodeLocation(message.getLocation()), globalBroadcastRange);
+				} catch (GameActionException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 		}
 	}
@@ -170,70 +202,29 @@ public class Scout extends Role {
 			if(messages > 10) break;
 		}
 		
-	}
-	
-	//Constants for gotoObjective
-	private static final int[] forwardDirectionsToTry = {0, 1, -1};
-	private static final int[] secondaryDirectionsToTry = {2, -2, 3, -3};
-	private static final int[] allTheDirections = {0, 1, -1, 2, -2, 3, -3};
-	
-	private static final int tooFarAwayThreshold = 30;  //Don't consider friends distances greater than this from us
-	private static final int closerToGoalThreshold = 6; //Go towards friend if closer to goal by this amount
-	
-	/**
-	 * Goes to the location specified, and stays a certain distance away from it.
-	 * @param flag objective location
-	 * @param hysterisis margin required to initially be at the objective
-	 * @param margin of distance that is satisfactory to be away from the objective
-	 * @throws GameActionException
-	 */
-	private void gotoObjective(MapLocation flag, int hysterisis, int margin) throws GameActionException{
-		if(rc.isCoreReady() && flag != null) {
-			Direction dirToObjective =  myLocation.directionTo(flag);
-			int distanceToObjective = myLocation.distanceSquaredTo(flag);
-			if ( (distanceToObjective > hysterisis && !atObjective)	|| distanceToObjective > margin) {
-				atObjective = distanceToObjective <= margin;
-				//First let's see if we can move straight towards the objective
-				for (int deltaD:forwardDirectionsToTry) {
-					//TODO Could slightly optimize by choosing diagonal direction of most friends first
-					Direction attemptDirection = Direction.values()[(dirToObjective.ordinal()+deltaD+8)%8];
-					if(rc.canMove(attemptDirection)) {
-						rc.move(attemptDirection);
-						return;
-					}
-				}		
-				//Move torwards some friend if they are closer to the goal than us
-				RobotInfo friendCloserToGoal = null;
-				for(RobotInfo robot:friendsInSight){
-					//First let's find a friend that fits our profile
-					int robotDistanceToGoal = robot.location.distanceSquaredTo(flag);
-					if ((robotDistanceToGoal - closerToGoalThreshold) > distanceToObjective && myLocation.distanceSquaredTo(robot.location) < tooFarAwayThreshold) {			
-						friendCloserToGoal = robot;
-						break;
+		if (!rc.isCoreReady()) { //Amortize
+			for (MapLocation den:dens) {
+				int distanceToDen = myLocation.distanceSquaredTo(den);
+				if (distanceToDen <= sensorRadiusSquared) {
+					RobotInfo robotAtDenLoc = rc.senseRobotAtLocation(den);
+					if (robotAtDenLoc == null || robotAtDenLoc.type != RobotType.ZOMBIEDEN) {
+						dens.remove(den);
+						destroyedDens.add(den);
+						rc.broadcastMessageSignal(Comms.createHeader(Comms.DEN_DESTROYED), Comms.encodeLocation(den), globalBroadcastRange);
 					}
 				}
-				//TODO Replace with a better movement towards friend, such as sideways in the friends direction
-				if (friendCloserToGoal != null) {
-					//And then let's move towards that friend
-					Direction dirToFriend =  myLocation.directionTo(flag);
-					for (int deltaD:forwardDirectionsToTry) {
-						Direction attemptDirection = Direction.values()[(dirToFriend.ordinal()+deltaD+8)%8];
-						if(rc.canMove(attemptDirection)) {
-							rc.move(attemptDirection);
-							return;
-						}
-					}	
-				}
-				//Finally, we try moving sideways or backwards
-				for (int deltaD:secondaryDirectionsToTry) {
-					Direction attemptDirection = Direction.values()[(dirToObjective.ordinal()+deltaD+8)%8];
-					if(rc.canMove(attemptDirection)) {
-						rc.move(attemptDirection);
-						return;
+			}
+		} else { 
+			for (MapLocation den:predictedDens) {
+				int distanceToDen = myLocation.distanceSquaredTo(den);
+				if (distanceToDen <= sensorRadiusSquared) {
+					RobotInfo robotAtDenLoc = rc.senseRobotAtLocation(den);
+					if (robotAtDenLoc == null || robotAtDenLoc.type != RobotType.ZOMBIEDEN) {
+						predictedDens.remove(den);
+						rc.broadcastMessageSignal(Comms.createHeader(Comms.PREDICTED_DEN_NOT_FOUND), Comms.encodeLocation(den), globalBroadcastRange);
 					}
 				}
 			}
 		}
-		else atObjective = true;
 	}
 }

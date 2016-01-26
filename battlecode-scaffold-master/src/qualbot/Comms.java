@@ -23,6 +23,7 @@ public class Comms {
 	//Exploration messages
 	public static final int DEN_FOUND = 66; //If a den is scouted
 	public static final int DEN_DESTROYED = 67; //If a den is destroyed
+	public static final int PREDICTED_DEN_NOT_FOUND = 80;
 	public static final int ENEMY_ARCHON_SIGHTED = 70; //If an archon is scouted
 	public static final int NEED_BACKUP = 75;
 	public static final int NO_LONGER_NEED_BACKUP = 76;
