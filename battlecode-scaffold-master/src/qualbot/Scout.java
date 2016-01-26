@@ -75,7 +75,7 @@ public class Scout extends Role {
 				
 				if(nearestTurret != null && enemiesInSight.length > 0) {
 					RobotInfo targetEnemy = getAttackTarget(enemiesInSight, GameConstants.TURRET_MINIMUM_RANGE, nearestTurret.location);
-					rc.broadcastMessageSignal(Comms.createHeader(Comms.TURRET_ATTACK_HERE), Comms.encodeLocation(targetEnemy.location), RobotType.SCOUT.sensorRadiusSquared);
+					if(targetEnemy != null) rc.broadcastMessageSignal(Comms.createHeader(Comms.TURRET_ATTACK_HERE), Comms.encodeLocation(targetEnemy.location), RobotType.SCOUT.sensorRadiusSquared);
 				}
 				
 				if(state == IDLE) {
