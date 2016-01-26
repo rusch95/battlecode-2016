@@ -6,6 +6,7 @@ import battlecode.common.Clock;
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
+import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import battlecode.common.Signal;
 
@@ -23,7 +24,7 @@ public class Archon extends Role {
 		while(true) {
 			try {
 				handleMessages();
-				//TODO heal();
+				healAlly();
 				myLocation = rc.getLocation();
 				
 				//TEST CODE PLEASE IGNORE
@@ -81,6 +82,27 @@ public class Archon extends Role {
 		}
 	}
 
+	/**
+	 * Heals the weakest nearby friendly
+	 * @throws GameActionException 
+	 */
+	public void healAlly() throws GameActionException {
+		RobotInfo[] nearbyRobots = rc.senseNearbyRobots(attackRadiusSquared, myTeam);
+		RobotInfo weakestFriend = null;
+		if (nearbyRobots.length > 0) {
+        	double minHealth = Double.POSITIVE_INFINITY;
+        	for (RobotInfo curBot : nearbyRobots){
+        		if (curBot.health < minHealth && curBot.type != RobotType.ARCHON) {
+        			minHealth = curBot.health;
+        			weakestFriend = curBot;
+        		}
+        	}
+		}
+		if (weakestFriend != null) {
+        	rc.repair(weakestFriend.location);
+        }
+	}
+	
 	private void tryToBuild(RobotType typeToBuild) throws GameActionException{
 		if(rc.isCoreReady()) {
 			for(int i = 0; i < 8; i++) {

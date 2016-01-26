@@ -21,32 +21,14 @@ public class Guard implements Role {
     private final Team otherTeam;
     private final RobotType myType;
     private final int attackRadius;
+    private int squadArchon;
     private final MapLocation[] myArchons;
     private final MapLocation[] enemyArchons;
-    
-    //Previou stat info
+
+    //Previous state info
     private Direction prevDirection = Direction.NONE;
     private double prevHealth;
     
-    //Magic Numbers
-    private final int CLOSE_RANGE = 5;
-    private final int MED_RANGE = 25;
-    private final int FAR_RANGE = 30;
-    private final int MAX_RANGE = -1;
-	private final int CLOSE_TOO_MANY = 6;
-	private final int CLOSE_TOO_FEW = 2;
-	private final int MED_TOO_MANY = 20;
-	private final int MED_TOO_FEW = 5;
-	private final int FAR_TOO_MANY = 999;
-	private final int FAR_TOO_FEW = 0;
-	private final int MIN_SQUAD_NUM = 1;
-	private final double RETREAT_HEALTH_PERCENT = 0.35;	
-	private final int WITHIN_DEN_RANGE = 10;	
-	private final int BASIC_GET_HELP_RANGE = 200;
-	private final int DONT_FOLLOW_BASIC_IN_BASE_DISTANCE = 16;
-	private final int REACHED_GOAL_DISTANCE = 16;
-    private final int DONT_REBROADCAST_DISTANCE = 16;
-	
     //Global Flags
     private boolean protectingBase = false;
     private boolean actingOnMessage = false;
@@ -61,66 +43,111 @@ public class Guard implements Role {
     private MapLocation base;
     private MapLocation currentBasicGoal;
     private MapLocation currentOrderedGoal;
-    private MapLocation curDenLocation;
     
-    //Global Numbers
+    //Global Integers
     private int basicGoalTimeout = 0;
     
-	public Guard(RobotController rc){
+    //Magic Numbers
+    private final int CLOSE_RANGE = 2;
+    private final int MED_RANGE = 9;
+    private final int FAR_RANGE = 25;
+    private final int MAX_RANGE = -1;
+	private final int CLOSE_TOO_MANY = 4;
+	private final int CLOSE_TOO_FEW = 2;
+	private final int MED_TOO_MANY = 8;
+	private final int MED_TOO_FEW = 3;
+	private final int FAR_TOO_MANY = 999;
+	private final int FAR_TOO_FEW = 0;
+	private final int MIN_SQUAD_NUM = 1;
+	private final double RETREAT_HEALTH_PERCENT = 0.35;	
+	private final int WITHIN_DEN_RANGE = 10;	
+	private final int BASIC_GET_HELP_RANGE = 200;
+	private final int DONT_FOLLOW_BASIC_IN_BASE_DISTANCE = 16;
+	private final int REACHED_GOAL_DISTANCE = 16;
+    private final int DONT_REBROADCAST_DISTANCE = 16;
+	
+	public Guard(RobotController rc){	
 		this.rc = rc;
 		this.rand = new Random(rc.getID());
 		this.myTeam = rc.getTeam();
 		this.otherTeam = myTeam.opponent();
 		this.base = rc.getLocation();
-		//TODO update base location if archon changes position
 		this.prevHealth = rc.getHealth();
-		this.myType = rc.getType();
+		this.myType = RobotType.SOLDIER;
 		this.attackRadius = myType.attackRadiusSquared;
 		this.myArchons = rc.getInitialArchonLocations(myTeam);
 		this.enemyArchons = rc.getInitialArchonLocations(otherTeam);
+		RobotInfo[] friends = rc.senseNearbyRobots(MAX_RANGE, myTeam);
+		squadArchon = Utility.getBotOfType(friends, RobotType.ARCHON, rand, rc).ID;
 	}
 	
 	@Override
 	public void run() {
 		while(true){
 			try {
-				RobotInfo[] enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), RobotType.GUARD.attackRadiusSquared);
+				rc.setIndicatorString(0, ""+squadArchon);
+				if (base != null) {
+					rc.setIndicatorString(1, "Base X: "+base.x+" Y: "+base.y);
+				}
+				//TODO Refactor to compute these only if necessary
 				RobotInfo[] enemiesSeen = rc.senseHostileRobots(rc.getLocation(), MAX_RANGE);
 				RobotInfo[] friendsSeen = rc.senseNearbyRobots(MAX_RANGE, myTeam);
-				
+				RobotInfo[] enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), attackRadius);
+
 				//Change some flags if necessary
 				beingAttacked = (rc.getHealth() < prevHealth);
 				beingSniped = (enemiesSeen.length == 0 && beingAttacked);
-								
-				Utility.cyanidePill(rc);
 				
+				//Attack code
 				RobotInfo targetEnemy = null;
-				if(enemiesWithinRange.length > 0 && rc.isWeaponReady()) { //We're in combat
+				if(enemiesWithinRange.length > 0) { //We're in combat
 					targetEnemy = Utility.getTarget(enemiesWithinRange, 0, rc.getLocation());
-					if(targetEnemy != null) {
+					if( targetEnemy != null && rc.isWeaponReady()) {
 						rc.attackLocation(targetEnemy.location);
-						if (targetEnemy.type == RobotType.ZOMBIEDEN) {
-							curDenLocation = targetEnemy.location;
-						}
-					} 
-				}
-				
-				//Update whether zombies will spawn in next n rounds
+					}
+				}			
+
+				Utility.cyanidePill(rc);
 				
 				//Amortizes bytecode usage
 				if (!rc.isCoreReady()) {
 					handleMessages();
 				} else {
-					//Flee code
+					//Movement code
 					Direction dirToGo = Direction.NONE;
-					
-					//Move back code
 				    if (enemiesSeen.length > 0) {
-							//Move towards enemy
-							RobotInfo closeEnemy = Utility.getClosest(enemiesSeen, rc.getLocation());
-							prevDirection = Utility.tryToMove(rc, rc.getLocation().directionTo(closeEnemy.location), prevDirection);
-						
-					//TODO Replace with comm and scout orders
+				    	//TODO Optimize. Implement switch to just stay out of range while followed, else stay just out of range.
+				    	//Can probably implement by having them stand still if enemy still, else run along at rate of enemy
+				    	MapLocation myLocation = rc.getLocation();
+				    	if(targetEnemy == null) targetEnemy = Utility.getTarget(enemiesSeen, 0, rc.getLocation());
+						Direction dirToTarget = myLocation.directionTo(targetEnemy.location);
+						int distanceToTarget = myLocation.distanceSquaredTo(targetEnemy.location);
+						int kitedDistanceToTarget = myLocation.add(dirToTarget.opposite()).distanceSquaredTo(targetEnemy.location);
+						//Currently, this keeps them just in range
+						if (kitedDistanceToTarget <= (RobotType.SOLDIER.attackRadiusSquared) && targetEnemy.type != RobotType.ZOMBIEDEN && !protectingBase && !beingSniped) {
+							//KIIITTTEEEE
+							dirToGo = dirToTarget.opposite();
+							prevDirection=Utility.tryToMove(rc, dirToGo, prevDirection);
+							
+						} else if (targetEnemy.type == RobotType.ZOMBIEDEN && distanceToTarget < 10) {
+							//Do nothing
+							
+						} else if (distanceToTarget > RobotType.SOLDIER.attackRadiusSquared){
+							//Get closer if we can't hit them
+							prevDirection=Utility.tryToMove(rc, dirToTarget,prevDirection);
+							dirToGo = dirToTarget;
+						}
+					
+				    } else if (rc.getHealth() / myType.maxHealth < RETREAT_HEALTH_PERCENT) {
+				    	//Retreat
+				    	//TODO Optimize
+							if (Utility.chance(rand, .7)) {
+								dirToGo = rc.getLocation().directionTo(base);
+							} else if (enemiesWithinRange.length > 0) {
+								dirToGo = rc.getLocation().directionTo(enemiesWithinRange[0].location).opposite();
+							}
+							prevDirection=Utility.tryToMove(rc, dirToGo, prevDirection);	
+							
 				    } else if (currentOrderedGoal != null && rc.canSense(currentOrderedGoal)) {
 				    	if (attackDen) {
 				    		RobotInfo robotAtLocation = rc.senseRobotAtLocation(currentOrderedGoal);
@@ -128,20 +155,30 @@ public class Guard implements Role {
 				    			currentOrderedGoal = base;
 				    			attackDen = false;
 				    		}
-				    	}		
-							
+				    	}
+					
 				    } else if (currentBasicGoal != null) {
 						dirToGo = rc.getLocation().directionTo(currentBasicGoal);
 						prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);
 					
 				    } else if (currentOrderedGoal != null) {
 						dirToGo = rc.getLocation().directionTo(currentOrderedGoal);
-						prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);	
-					
-				    } else {
+						prevDirection=Utility.tryToMove(rc, dirToGo,prevDirection);		
 						
-						swarmMovement();
+					} else if (friendsSeen.length > 0) {
 						
+						dirToGo = swarmMovement();
+						
+					}
+							
+					if (rc.isWeaponReady()) {
+						enemiesWithinRange = rc.senseHostileRobots(rc.getLocation(), RobotType.SOLDIER.attackRadiusSquared);
+						if(enemiesWithinRange.length > 0) { //We're in combat
+							targetEnemy = Utility.getTarget(enemiesWithinRange, 0, rc.getLocation());
+							if( targetEnemy != null) {
+								rc.attackLocation(targetEnemy.location);
+							}
+						}
 					}
 				}
 			} catch (Exception e) {
@@ -159,17 +196,19 @@ public class Guard implements Role {
 			if(message.getTeam().equals(myTeam)){ //Friendly message
 				int[] contents = message.getMessage();
 				int id = message.getID();
+				rc.setIndicatorString(2, squadArchon + "should sometimes equal " + id);
+				if (id == squadArchon) {
+					base = message.getLocation(); //Update squad archon location
+				}
 				//TODO Include ignore bit to lower melee overhead
 				if(contents != null) { //Not a basic signal
 					int code = Comms.getMessageCode(contents[0]);
-					int aux = Comms.getAux(contents[0]);	
+					int aux = Comms.getAux(contents[0]);
 					MapLocation loc;
 					switch (code){
 						case Comms.ATTACK_DEN:
 							loc = Comms.decodeLocation(contents[1]);
 							currentOrderedGoal = loc;
-							curDenLocation = loc;
-							beingSniped = true;
 							attackDen = true;
 							break;
 						case Comms.ATTACK_ENEMY:
@@ -183,7 +222,7 @@ public class Guard implements Role {
 					}
 				}
 				else { //Basic Message
-					
+	
 				}
 			}
 		}
@@ -216,7 +255,7 @@ public class Guard implements Role {
 		} else if (closeFriends.length < CLOSE_TOO_FEW && Utility.chance(rand, .5)) {
 			//Come together if med range is sparse
 			RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc.getLocation());
-			if (Utility.chance(rand, .8) && closestFriend != null) {
+			if (Utility.chance(rand, .8)) {
 				//Whether to clump or go home
 				dirToGo = rc.getLocation().directionTo(closestFriend.location);
 			} else {
@@ -232,7 +271,7 @@ public class Guard implements Role {
 		} else if (medFriends.length < MED_TOO_FEW && Utility.chance(rand, .5)) {
 			//Come together if med range is sparse
 			RobotInfo closestFriend = Utility.getClosest(friendsSeen, rc.getLocation());
-			if (Utility.chance(rand, .8) && closestFriend != null) {
+			if (Utility.chance(rand, .8)) {
 				//Whether to clump or go home
 				dirToGo = rc.getLocation().directionTo(closestFriend.location);
 			} else {
@@ -242,4 +281,6 @@ public class Guard implements Role {
 		}
 		return dirToGo;
 	}
+	
+	
 }

@@ -51,9 +51,7 @@ public class Soldier extends Role {
 										+"  Horizontal Index:"+longitudeIndex(rc.getLocation(),Direction.EAST));
 				MapLocation mirrored = mirroredLocation(rc.getLocation(), mapSymmetry);
 				rc.setIndicatorString(1, "Mirror X: "+mirrored.x+"  Mirror Y: "+mirrored.y);
-				objectiveFlag = mapCenter;
-				providingBackup = false;
-				
+
 				if (rc.getRoundNum() > 1500) {
 					objectiveFlag = enemyArchonStartPositions[0];
 					objectiveMargin = 70;
