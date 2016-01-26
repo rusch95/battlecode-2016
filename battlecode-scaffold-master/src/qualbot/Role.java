@@ -111,6 +111,51 @@ public abstract class Role {
 	 */
 	protected abstract void handleMessage(Signal message);
 	
+	private static final int[] directionsToTryFirst = {0, -1, 1};
+	private static final int[] directionsToTrySecond = {-2, 2};
+	
+	/**
+	 * Try to move in a specified directino, ONLY with no objective in mind. Useful for kiting.
+	 * @param forward Direction to be going ish
+	 * @return Direction we ended up moving
+	 * @throws GameActionException
+	 */
+	protected Direction tryToMove(Direction forward) throws GameActionException {
+		if(rc.isCoreReady()) {
+			for(int deltaD:directionsToTryFirst){
+				Direction attemptDirection = Direction.values()[(forward.ordinal()+deltaD+8)%8];
+				if(rc.canMove(attemptDirection)){
+					rc.move(attemptDirection);
+					return Direction.NONE;
+				}
+			}
+			//failed all attempts. Clear rubble ahead of us if we can.
+			double minRubble = Double.MAX_VALUE;
+			Direction dirToClear = Direction.NONE;
+			for(int deltaD:directionsToTryFirst){
+				Direction attemptDirection = Direction.values()[(forward.ordinal()+deltaD+8)%8];
+				MapLocation ahead = rc.getLocation().add(attemptDirection);
+				double rubbleAmount = rc.senseRubble(ahead);
+				if(rc.onTheMap(ahead) && rubbleAmount >= GameConstants.RUBBLE_OBSTRUCTION_THRESH && rubbleAmount <= minRubble) {
+					minRubble = rubbleAmount;
+					dirToClear = attemptDirection;
+				}
+			}
+			if (dirToClear != Direction.NONE) {
+				rc.clearRubble(dirToClear);
+				return Direction.NONE;
+			}
+			for(int deltaD:directionsToTrySecond){
+				Direction attemptDirection = Direction.values()[(forward.ordinal()+deltaD+8)%8];
+				if(rc.canMove(attemptDirection)){
+					rc.move(attemptDirection);
+					return attemptDirection;
+				}
+			}
+		}
+		return Direction.NONE;
+	}
+	
 	/**
 	 * Checks if it can avoid becomes being a zombie by killing itself, and does it if it can.
 	 */
@@ -264,14 +309,14 @@ public abstract class Role {
 		}
 		return null;
 	}
+
+	static int LONGITUDE_WIDTH = 5;
+	static int MAX_MAP_SIZE = 100;
 	/*
 	 * Given a map location and a direction, returns a unique number ranging between 0 - 360
 	 * corresponding to the lane this matches up with
 	 * TODO Unit test this shit
 	 */
-	
-	static int LONGITUDE_WIDTH = 5;
-	static int MAX_MAP_SIZE = 100;
 	@SuppressWarnings("incomplete-switch")
 	protected int longitudeIndex(MapLocation location, Direction direction) {
 		int directionOffset=0; //Sets aside area in array for each longitude type
