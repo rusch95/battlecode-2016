@@ -47,6 +47,7 @@ public class Soldier extends Role {
 
 				if(enemiesInRange.length > 0) {
 					targetEnemy = getAttackTarget(enemiesInRange, minRange, myLocation);
+					dealDamage();
 					kite(targetEnemy);
 				} else if(enemiesInSight.length > 0) {
 					targetEnemy = getAttackTarget(enemiesInSight, minRange, myLocation);
@@ -56,6 +57,7 @@ public class Soldier extends Role {
 				} else { //execute the current state
 					gotoObjective(objectiveFlag, objectiveMargin, objectiveMargin+15);
 				}
+				targetEnemy = getAttackTarget(enemiesInRange, minRange, myLocation);
 				dealDamage();
 				
 			} catch (Exception e) {
