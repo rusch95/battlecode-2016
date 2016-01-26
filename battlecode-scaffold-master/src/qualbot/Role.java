@@ -440,6 +440,10 @@ public abstract class Role {
 		return locationOffset / LONGITUDE_WIDTH + directionOffset;
 	}
 	
+	protected int indexMap(int x, int y, MapLocation center) {
+		return x + y * 21;
+	}
+	
 	//protected MapLocation longitudeBeginning();
 	
 	/*

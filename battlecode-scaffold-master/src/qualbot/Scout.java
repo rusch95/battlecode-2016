@@ -7,6 +7,7 @@ import java.util.HashSet;
 import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
+import battlecode.common.GameConstants;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
@@ -20,8 +21,9 @@ public class Scout extends Role {
 	private int needsBackup;
 	private MapLocation backupFlag;
 	
-	private static final int globalBroadcastRange = 10000; //TODO make this nice
+
 	private final int sensorRadius = (int)Math.pow(sensorRadiusSquared, 0.5);
+	private static final int globalBroadcastRange = 1000; //TODO make this nice
 	
 	//Objectives Information
 	private final ArrayList<MapLocation> dens;
@@ -29,10 +31,10 @@ public class Scout extends Role {
 	private final ArrayList<MapLocation> destroyedDens;
 	private final HashMap<Integer, MapLocation> enemyArchons; //Enemy Archon IDs and last known locations
 	private final ArrayList<MapLocation> neutrals;
-	private final HashSet<MapLocation> partsLocations;
 	private byte[] fineBlocks = new byte[500];
 	private HashMap<MapLocation, Integer> fineMap;
 	private HashMap<MapLocation, Integer> roughMap;
+	private final ArrayList<MapLocation> parts;
 	
 	//Robots Seen
 	private RobotInfo[] enemiesInSight;
@@ -57,9 +59,10 @@ public class Scout extends Role {
 		this.destroyedDens = new ArrayList<MapLocation>();
 		this.enemyArchons = new HashMap<Integer, MapLocation>();
 		this.neutrals = new ArrayList<MapLocation>();
-		this.partsLocations = new HashSet<MapLocation>();
 		this.fineMap = new HashMap<MapLocation, Integer>(400);
 		this.roughMap = new HashMap<MapLocation, Integer>(100);
+		this.parts = new ArrayList<MapLocation>();
+
 	}
 
 	@Override
@@ -69,11 +72,31 @@ public class Scout extends Role {
 				handleMessages(); //TODO Possibly amortize to every other turn if bytecode gets too high
 				myLocation = rc.getLocation();
 				enemiesInSight = rc.senseHostileRobots(myLocation, -1);
-				enemiesInRange = rc.senseHostileRobots(myLocation, attackRadiusSquared);
 				friendsInSight = rc.senseNearbyRobots(-1, myTeam);
 				scanSurroundings();
 				scanForBounds();
 				rebroadcastKnowledge();
+
+				RobotInfo nearestTurret = null;
+				int minDist = 20; //Minimum nearestTurret distance
+				for(RobotInfo friend : friendsInSight) {
+					if(friend.type == RobotType.TURRET) {
+						int distance = myLocation.distanceSquaredTo(friend.location);
+						if(distance < minDist) {
+							nearestTurret = friend;
+							minDist = distance;
+						}
+					}
+				}
+				
+				if(nearestTurret != null && enemiesInSight.length > 0) {
+					RobotInfo targetEnemy = getAttackTarget(enemiesInSight, GameConstants.TURRET_MINIMUM_RANGE, nearestTurret.location);
+					if(targetEnemy != null) {
+						rc.broadcastMessageSignal(Comms.createHeader(Comms.TURRET_ATTACK_HERE), Comms.encodeLocation(targetEnemy.location), RobotType.SCOUT.sensorRadiusSquared);
+						rc.setIndicatorString(1, "TARGET SIGHTED");
+					} else rc.setIndicatorString(1, "");
+				}
+				rc.setIndicatorString(0,String.valueOf(state));
 				
 				if(state == IDLE) {
 					if(dens.size() > 0) {//Siege a den if we can; the closest one to us
@@ -110,9 +133,10 @@ public class Scout extends Role {
 				
 				//Don't waste a round changing state
 				if( state == SIEGING_DEN) {
-					
+					gotoObjective(objectiveFlag, 30, 40, friendsInSight);
 				} else if( state == SIEGING_ENEMY) {
-					
+					gotoObjective(objectiveFlag, 30, 40, friendsInSight);
+					if(rc.getRoundNum()%200 == 0) state = IDLE; //TODO make this better
 				} else if( state == SEARCHING) {
 					boolean noCorners = !(minXFound || maxXFound || minYFound || maxYFound);
 					if (noCorners) {
@@ -126,8 +150,12 @@ public class Scout extends Role {
 					} else {
 						if (mapSymmetry == Symmetry.XY || mapSymmetry == Symmetry.XY_STRONG) {
 							trueCenter = mapCenter;
+						}
 					}
-				}			
+					if(!dens.isEmpty() || !enemyArchons.isEmpty()) {
+						state = IDLE;
+					}
+				}
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
 	            e.printStackTrace();
@@ -190,7 +218,7 @@ public class Scout extends Role {
 						}
 						break;
 					case Comms.DEN_DESTROYED:
-						if(!dens.remove(loc)); //Remove if in dens
+						if(!dens.remove(loc)) //Remove if in dens
 							predictedDens.remove(loc); //Remove from predicted if not in dens somehow
 						destroyedDens.add(loc);
 						if(state == SIEGING_DEN && objectiveFlag.equals(loc)) {
@@ -220,7 +248,7 @@ public class Scout extends Role {
 						neutrals.add(loc);
 						break;
 					case Comms.PARTS_FOUND:
-						partsLocations.add(loc);
+						parts.add(loc);
 						break;
 					default:
 						//
@@ -351,10 +379,11 @@ public class Scout extends Role {
 			}
 		}
 		
-		MapLocation[] parts = rc.sensePartLocations(RobotType.ARCHON.sensorRadiusSquared);
-		for(MapLocation pile : parts) {
-			if (!partsLocations.contains(pile)) {
-				partsLocations.add(pile);
+
+		MapLocation[] partsNearby = rc.sensePartLocations(RobotType.ARCHON.sensorRadiusSquared);
+		for(MapLocation pile : partsNearby) {
+			if(!parts.contains(pile)) {
+				parts.add(pile);
 				double value = rc.senseParts(pile);
 				if(value >= 20) {
 					rc.broadcastMessageSignal(Comms.createHeader(Comms.PARTS_FOUND, (int)value), Comms.encodeLocation(pile), globalBroadcastRange);
@@ -363,30 +392,34 @@ public class Scout extends Role {
 			}
 			if(messages > 10) break;
 		}
-		
-		if (!rc.isCoreReady()) { 
-			for (MapLocation den:dens) {
-				int distanceToDen = myLocation.distanceSquaredTo(den);
-				if (distanceToDen <= sensorRadiusSquared) {
-					RobotInfo robotAtDenLoc = rc.senseRobotAtLocation(den);
-					if (robotAtDenLoc == null || robotAtDenLoc.type != RobotType.ZOMBIEDEN) {
-						dens.remove(den);
-						destroyedDens.add(den);
-						rc.broadcastMessageSignal(Comms.createHeader(Comms.DEN_DESTROYED), Comms.encodeLocation(den), globalBroadcastRange);
-					}
-				}
-			}
-		} else { 
-			for (MapLocation den:predictedDens) {
-				int distanceToDen = myLocation.distanceSquaredTo(den);
-				if (distanceToDen <= sensorRadiusSquared) {
-					RobotInfo robotAtDenLoc = rc.senseRobotAtLocation(den);
-					if (robotAtDenLoc == null || robotAtDenLoc.type != RobotType.ZOMBIEDEN) {
-						predictedDens.remove(den);
-						rc.broadcastMessageSignal(Comms.createHeader(Comms.PREDICTED_DEN_NOT_FOUND), Comms.encodeLocation(den), globalBroadcastRange);
+		ArrayList<MapLocation> removeDens = new ArrayList<>();
+		for (MapLocation den : dens) {
+			if(rc.canSense(den)) {
+				RobotInfo robotAtDenLoc = rc.senseRobotAtLocation(den);
+				if (robotAtDenLoc == null || robotAtDenLoc.type != RobotType.ZOMBIEDEN) {
+					removeDens.add(den);
+					destroyedDens.add(den);
+					rc.broadcastMessageSignal(Comms.createHeader(Comms.DEN_DESTROYED), Comms.encodeLocation(den), globalBroadcastRange);
+					if(state == SIEGING_DEN && objectiveFlag.equals(den)) {
+						state = IDLE;
 					}
 				}
 			}
 		}
+		for(MapLocation den : removeDens) dens.remove(den); //To avoid concurrent modification
+
+		ArrayList<MapLocation> removePredictedDens = new ArrayList<>();
+		for (MapLocation den : predictedDens) {
+			int distanceToDen = myLocation.distanceSquaredTo(den);
+			if (distanceToDen <= sensorRadiusSquared) {
+				RobotInfo robotAtDenLoc = rc.senseRobotAtLocation(den);
+				if (robotAtDenLoc == null || robotAtDenLoc.type != RobotType.ZOMBIEDEN) {
+					removePredictedDens.add(den);
+					rc.broadcastMessageSignal(Comms.createHeader(Comms.PREDICTED_DEN_NOT_FOUND), Comms.encodeLocation(den), globalBroadcastRange);
+				}
+			}
+		}
+		for(MapLocation den : removePredictedDens) predictedDens.remove(den); //To avoid concurrent modification
+		
 	}
 }

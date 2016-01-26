@@ -20,6 +20,7 @@ public class Archon extends Role {
 	
 	public Archon(RobotController rc) {
 		super(rc);
+		this.dens = new ArrayList<MapLocation>();
 		this.parts = new HashMap<MapLocation, Integer>();
 		this.neutrals = new ArrayList<MapLocation>();
 	}
@@ -35,10 +36,11 @@ public class Archon extends Role {
 				
 				
 				//TEST CODE PLEASE IGNORE
-				MapLocation objectiveFlag = enemyArchonStartPositions[0];
-				if (rc.getTeamParts() < 200)
-				gotoObjective(objectiveFlag, objectiveMargin, objectiveMargin+15, friendsInSight);
-				tryToBuild(RobotType.SCOUT);
+				if(rc.getTeamParts() > 130) {
+					if(chance(0.85)) tryToBuild(RobotType.SOLDIER);
+					else if(chance(0.5)) tryToBuild(RobotType.SCOUT);
+					else tryToBuild(RobotType.TURRET);
+				}
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
 	            e.printStackTrace();
