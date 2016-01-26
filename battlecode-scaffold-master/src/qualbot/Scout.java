@@ -118,6 +118,11 @@ public class Scout extends Role {
 					
 				} else if( state == SEARCHING) {
 					
+					//Do moving and stuff
+					
+					if(!dens.isEmpty() || !enemyArchons.isEmpty()) {
+						state = IDLE;
+					}
 				}
 				
 			} catch (Exception e) {
