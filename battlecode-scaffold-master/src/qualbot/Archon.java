@@ -74,6 +74,15 @@ public class Archon extends Role {
 						tryToMove(dirToGo);
 					}
 				}
+				
+				//TEST CODE PLEASE IGNORE
+				if(rc.getTeamParts() > 130 && chance(0.3)) {
+					if(chance(0.75)) tryToBuild(RobotType.SOLDIER);
+					else if(chance(0.25)) tryToBuild(RobotType.GUARD);
+					else if(chance(0.7)) tryToBuild(RobotType.SCOUT);
+					else tryToBuild(RobotType.TURRET);
+				}
+				
 				if (rc.isCoreReady()) {
 					Tuple<MapLocation, Double> partsTup = searchForParts();
 					MapLocation partsLoc = partsTup.x;
@@ -98,6 +107,7 @@ public class Archon extends Role {
 						}
 					}
 				}
+				
 				if (enemies.length > 0) {
 					
 				}
@@ -107,13 +117,7 @@ public class Archon extends Role {
 				
 				flee(enemies);
 				
-				//TEST CODE PLEASE IGNORE
-				if(rc.getTeamParts() > 130 && chance(0.3)) {
-					if(chance(0.75)) tryToBuild(RobotType.SOLDIER);
-					else if(chance(0.25)) tryToBuild(RobotType.GUARD);
-					else if(chance(0.7)) tryToBuild(RobotType.SCOUT);
-					else tryToBuild(RobotType.TURRET);
-				}
+				if (rc.getTeamParts() < 300) anyGoodies(friendsInSight);
 			} catch (Exception e) {
 	            System.out.println(e.getMessage());
 	            e.printStackTrace();
@@ -122,6 +126,46 @@ public class Archon extends Role {
 			
 		}
 	}
+	
+	private void anyGoodies(RobotInfo[] friendsInSight) throws GameActionException {
+		RobotInfo[] neutralBots = rc.senseNearbyRobots(-1, Team.NEUTRAL);
+		MapLocation[] partsLocations = rc.sensePartLocations(-1);
+		MapLocation closestGoodie = null;
+		int closestDistance = 9999;
+		for (RobotInfo bot: neutralBots) {
+			int distance = bot.location.distanceSquaredTo(myLocation);
+			if (distance < closestDistance) {
+				closestGoodie = bot.location;
+				closestDistance = distance;
+			}
+		}
+		for (MapLocation parts: partsLocations) {
+			int distance = parts.distanceSquaredTo(myLocation);
+			if (distance < closestDistance) {
+				closestGoodie = parts;
+				closestDistance = distance;
+			}
+		}
+		for (MapLocation bot: neutrals) {
+			int distance = bot.distanceSquaredTo(myLocation);
+			if (distance < closestDistance) {
+				closestGoodie = bot;
+				closestDistance = distance;
+			}
+		}
+		for (MapLocation part: parts.keySet()) {
+			int distance = part.distanceSquaredTo(myLocation);
+			if (distance < closestDistance) {
+				closestGoodie = part;
+				closestDistance = distance;
+			}
+		}
+		objectiveFlag = closestGoodie;
+		if (objectiveFlag != null) {
+			gotoObjective(objectiveFlag, 0, objectiveMargin+15, friendsInSight);
+		}
+	}
+	
 	/**
 	 * Returns the closests/best neutral bot in range.
 	 * @return Tuple of the form Tuple.x = bestBot and Tuple.y = bestValue
