@@ -388,6 +388,13 @@ public abstract class Role {
 				}
 			}
 		}
+		if(rc.isCoreReady()) { //We didn't move, try to space out a little bit
+			RobotInfo[] friendsAdjacent = rc.senseNearbyRobots(2, myTeam);
+			for(RobotInfo friend : friendsAdjacent) {
+				if(friend.type == RobotType.ARCHON && friendsAdjacent.length > 3) tryToMove(myLocation.directionTo(friend.location).opposite());
+			}
+			if(friendsAdjacent.length > 6) tryToMove(myLocation.directionTo(friendsAdjacent[0].location).opposite());
+		}
 	return atObjective;
 	}
 	

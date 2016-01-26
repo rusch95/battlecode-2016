@@ -126,6 +126,10 @@ public class Scout extends Role {
 						state = SIEGING_ENEMY;
 						objectiveFlag = archonToSiege;
 						rc.broadcastMessageSignal(Comms.createHeader(Comms.ATTACK_ENEMY), Comms.encodeLocation(archonToSiege), globalBroadcastRange);
+					} else if(rc.getRoundNum() > 1500 && rc.getRoundNum()%10 == 0 && rc.getRobotCount() > 50) {
+						state = SIEGING_ENEMY;
+						objectiveFlag = enemyArchonStartPositions[0];
+						rc.broadcastMessageSignal(Comms.createHeader(Comms.ATTACK_ENEMY), Comms.encodeLocation(objectiveFlag), globalBroadcastRange);
 					} else {
 						state = SEARCHING;
 					}
@@ -152,7 +156,7 @@ public class Scout extends Role {
 							trueCenter = mapCenter;
 						}
 					}
-					if(!dens.isEmpty() || !enemyArchons.isEmpty()) {
+					if(!dens.isEmpty() || !enemyArchons.isEmpty() || rc.getRoundNum()%40 == 0) {
 						state = IDLE;
 					}
 				}
@@ -392,6 +396,7 @@ public class Scout extends Role {
 			}
 			if(messages > 10) break;
 		}
+		
 		ArrayList<MapLocation> removeDens = new ArrayList<>();
 		for (MapLocation den : dens) {
 			if(rc.canSense(den)) {
