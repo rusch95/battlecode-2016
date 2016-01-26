@@ -36,7 +36,7 @@ public class RobotPlayer {
 	        } else if (rc.getType() == RobotType.GUARD) {
 	        	//me = new Guard(rc);
 	        } else if (rc.getType() == RobotType.SCOUT) {
-	        	//me = new Scout(rc);
+	        	me = new Scout(rc);
 	        } else if (rc.getType() == RobotType.VIPER) {
 	        	//me = new Viper(rc);
 	        } else { //This shouldn't be reached

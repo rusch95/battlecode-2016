@@ -49,7 +49,7 @@ public abstract class Role {
     protected MapLocation[] friendlyArchonStartPositions;
     protected MapLocation[] enemyArchonStartPositions;
     protected ZombieSpawnSchedule spawnSchedule;
-    protected int mapSymmetry; //0=XY,1=X, 2=Y, 3=XY
+    protected Symmetry mapSymmetry; //0=XY,1=X, 2=Y, 3=XY
     protected MapLocation mapCenter;
     protected RobotInfo archonThatSpawnedMe;
     
@@ -57,6 +57,10 @@ public abstract class Role {
     												Direction.EAST, Direction.SOUTH_EAST,
     												Direction.SOUTH, Direction.SOUTH_WEST,
     												Direction.WEST, Direction.NORTH_WEST};
+    
+    public enum Symmetry {
+        X, Y, XY, XY_STRONG; 
+    }
     
 	//STATE CONSTANTS
 	public static final int SEIGING_DEN = 150;
@@ -81,7 +85,7 @@ public abstract class Role {
 		this.friendlyArchonStartPositions = rc.getInitialArchonLocations(myTeam);
 		this.enemyArchonStartPositions = rc.getInitialArchonLocations(otherTeam);
 		this.spawnSchedule = rc.getZombieSpawnSchedule();
-		Tuple<Integer, MapLocation> mapSymTup = symmetryAndCenter();
+		Tuple<Symmetry, MapLocation> mapSymTup = symmetryAndCenter();
 		this.mapSymmetry = mapSymTup.x; 
 		this.mapCenter = mapSymTup.y;
 		if (rc.getType() != RobotType.ARCHON) archonThatSpawnedMe = getBotOfType(rc.senseNearbyRobots(4, myTeam), RobotType.ARCHON);
@@ -260,6 +264,72 @@ public abstract class Role {
 		}
 		return null;
 	}
+	/*
+	 * Given a map location and a direction, returns a unique number ranging between 0 - 360
+	 * corresponding to the lane this matches up with
+	 * TODO Unit test this shit
+	 */
+	@SuppressWarnings("incomplete-switch")
+	protected int longitudeIndex(MapLocation location, Direction direction) {
+		int directionOffset=0;
+		int locationOffset=0;
+		int offsetX = mapCenter.x + 50 - location.x;
+		int offsetY = mapCenter.y + 50 - location.y;
+		switch (direction){
+			case NORTH:
+			case SOUTH:
+				locationOffset = offsetX;
+				directionOffset = 0;
+				break;
+			case WEST:
+			case EAST:
+				locationOffset = offsetY;
+				directionOffset = 41;
+				break;
+			case NORTH_EAST:
+			case SOUTH_WEST:
+				locationOffset = (offsetX - offsetY) + 40;
+				directionOffset = 82;
+				break;
+			case NORTH_WEST:
+			case SOUTH_EAST:
+				locationOffset = (offsetX + offsetY);
+				directionOffset = 163;
+				break;
+		} 
+		return locationOffset / 5 + directionOffset;
+	}
+	
+	//protected MapLocation longitudeBeginning();
+	
+	/*
+	 * Determines the corresponding mirrored point to a given location
+	 * @param Returns the mirrored mapLocation
+	 * TODO Unit test this shit
+	 */
+	protected MapLocation mirroredLocation(MapLocation location, Symmetry symmetry) {
+		int x = 0;
+		int y = 0;
+		switch (symmetry) {
+			case X:
+				x = location.x;
+				y = mapCenter.y + (mapCenter.y - location.y);
+				break;
+			case Y:
+				x = mapCenter.x + (mapCenter.x - location.x);
+				y = location.y;
+				break;
+			case XY:
+				x = mapCenter.x + (mapCenter.x - location.x);
+				y = mapCenter.y + (mapCenter.y - location.y);
+				break;
+			case XY_STRONG:
+				x = mapCenter.x + (mapCenter.x - location.x);
+				y = mapCenter.y + (mapCenter.y - location.y);
+				break;
+		}
+		return new MapLocation(x,y);
+	}
 	
 	/**
 	 * Calculates the map symmetry type and some of the center coordinates
@@ -267,9 +337,9 @@ public abstract class Role {
 	 * This only corresponds to the true center, when there is XY symmetry.
 	 * For Y symmetry, the y coordinate is correct, and for X sym, the x coord is correct
 	 * Finally, strong xy detects certain arrangements of the map, but is essentially the same as xy.
-	 * @return Returns a Tuple of the form x = symmetry and y = map center constrained by symmetry. For symmetry, 0 = strong xy, 1 = x, 2 = y, and 3 = xy. 
+	 * @return Returns a Tuple of the form x = symmetry and y = map center constrained by symmetry.
 	 */
-	protected Tuple<Integer, MapLocation> symmetryAndCenter() {
+	protected Tuple<Symmetry, MapLocation> symmetryAndCenter() {
 		//Determine symmetry
 		MapLocation archonOneLoc = friendlyArchonStartPositions[0];
 		boolean symY = false;
@@ -294,17 +364,17 @@ public abstract class Role {
 		totalX /= friendlyArchonStartPositions.length * 2; //The average of all positions is the center
 		totalY /= friendlyArchonStartPositions.length * 2;
 		MapLocation center = new MapLocation(totalX, totalY);
-		int sym;
+		Symmetry sym;
 		if (symY && symX) {
-			sym = 0;
+			sym = Symmetry.XY_STRONG;
 		} else if (symX) {
-			sym = 1;
+			sym = Symmetry.X;
 		} else if (symY) {
-			sym = 2;
+			sym = Symmetry.Y;
 		} else {
-			sym = 3;
+			sym = Symmetry.XY;
 		}
-		Tuple<Integer, MapLocation> symAndCenter = new Tuple<>(sym, center);
+		Tuple<Symmetry, MapLocation> symAndCenter = new Tuple<>(sym, center);
 		return symAndCenter;
 	}
 	

@@ -23,6 +23,7 @@ public class Archon extends Role {
 		while(true) {
 			try {
 				handleMessages();
+				//TODO heal();
 				myLocation = rc.getLocation();
 				
 				//TEST CODE PLEASE IGNORE

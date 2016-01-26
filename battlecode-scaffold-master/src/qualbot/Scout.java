@@ -26,7 +26,7 @@ public class Scout extends Role {
 	private static final int closerToGoalThreshold = 6; //Go towards friend if closer to goal by this amount
 	
 	//To be sorted
-	private short[] mapBlocksVisited;
+	private short[] mapLongitudesVisited = new short[280]; //Divide the map into 5 width lane
 	
 	public Scout(RobotController rc) {
 		super(rc);
@@ -56,9 +56,8 @@ public class Scout extends Role {
 	    	}
 			Clock.yield(); //TODO: Move this? Exceptions waste a round this way
 		}
-	}.
+	}
 
-	@Override/Soldier.java
 	protected void handleMessage(Signal message) {
 		if(message.getTeam().equals(myTeam)) {
 			int[] contents = message.getMessage();
@@ -141,7 +140,6 @@ public class Scout extends Role {
 		}
 		dodgeEnemies();
 	}
-	
 	
 	private static final int[] forwardDirectionsToTry = {0, 1, -1};
 	private static final int[] secondaryDirectionsToTry = {2, -2, 3, -3};
